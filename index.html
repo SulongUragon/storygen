@@ -331,6 +331,10 @@
               <option value="sepia">Sepia</option>
             </select>
           </div>
+          <div class="field">
+            <label>Illustration size (<span id="illScaleVal">100%</span>) · pull down to reveal background</label>
+            <input type="range" id="illScale" min="55" max="100" value="100">
+          </div>
           <div class="row-2">
             <div class="field">
               <label>Title color</label>
@@ -426,6 +430,8 @@ const titleColorEl = $('titleColor');
 const titlePosEl = $('titlePos');
 const darkenEl = $('darken');
 const darkenValEl = $('darkenVal');
+const illScaleEl = $('illScale');
+const illScaleValEl = $('illScaleVal');
 const captionColorEl = $('captionColor');
 const subsEnabledEl = $('subsEnabled');
 const subsWordsEl = $('subsWords');
@@ -691,14 +697,27 @@ function drawConcrete() {
 
 function drawIllustration(img, zoom, alpha) {
   if (!img) return;
-  // cover-fit image to canvas
+  const illScale = parseFloat(illScaleEl?.value || '100') / 100;
   const imgAspect = img.width / img.height;
   const canvasAspect = W / H;
   let dw, dh;
-  if (imgAspect > canvasAspect) {
-    dh = H; dw = H * imgAspect;
+  if (illScale >= 1.0) {
+    // Cover-fit (fills canvas, slight overflow cropped)
+    if (imgAspect > canvasAspect) {
+      dh = H; dw = H * imgAspect;
+    } else {
+      dw = W; dh = W / imgAspect;
+    }
   } else {
-    dw = W; dh = W / imgAspect;
+    // Contain-fit inside a scaled target (background shows around)
+    const targetW = W * illScale;
+    const targetH = H * illScale;
+    const targetAspect = targetW / targetH;
+    if (imgAspect > targetAspect) {
+      dw = targetW; dh = targetW / imgAspect;
+    } else {
+      dh = targetH; dw = targetH * imgAspect;
+    }
   }
   dw *= zoom; dh *= zoom;
   const dx = (W - dw) / 2;
@@ -706,11 +725,15 @@ function drawIllustration(img, zoom, alpha) {
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.drawImage(img, dx, dy, dw, dh);
-  // Darken overlay on illustration area
+  // Darken overlay — only over illustration area when scaled down
   const darken = parseInt(darkenEl.value) / 100;
   if (darken > 0) {
     ctx.fillStyle = `rgba(0, 0, 0, ${darken})`;
-    ctx.fillRect(0, 0, W, H);
+    if (illScale >= 1.0) {
+      ctx.fillRect(0, 0, W, H);
+    } else {
+      ctx.fillRect(dx, dy, dw, dh);
+    }
   }
   ctx.restore();
 }
@@ -1441,6 +1464,10 @@ $('downloadBtn').onclick = async () => {
 );
 $('bgVariant').addEventListener('change', () => {
   buildConcrete($('bgVariant').value);
+  drawStaticPreview();
+});
+illScaleEl.addEventListener('input', () => {
+  illScaleValEl.textContent = illScaleEl.value + '%';
   drawStaticPreview();
 });
 darkenEl.addEventListener('input', () => {
