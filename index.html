@@ -322,7 +322,16 @@
         <div class="cost-note" id="assetsStatus">No assets yet</div>
         <details style="margin-top:12px">
           <summary>Style &amp; audio options</summary>
-          <div class="row-2" style="margin-top:10px">
+          <div class="field" style="margin-top:10px">
+            <label>Background texture</label>
+            <select id="bgVariant">
+              <option value="concrete" selected>Gray Concrete (default)</option>
+              <option value="blood">Blood Red</option>
+              <option value="black">Pure Black</option>
+              <option value="sepia">Sepia</option>
+            </select>
+          </div>
+          <div class="row-2">
             <div class="field">
               <label>Title color</label>
               <select id="titleColor">
@@ -447,23 +456,32 @@ let currentExt = 'webm';
 let playing = false;
 let playAbort = null;
 
-// ----- Concrete bg generator (procedural)
-function buildConcrete() {
+// ----- Background texture generator (procedural)
+const BG_PALETTES = {
+  concrete: { stops: ['#7a7a7a', '#6a6a6a', '#555555'], grainAmount: 30, splotchAlpha: 0.06 },
+  blood:    { stops: ['#5a0000', '#3d0000', '#1a0000'], grainAmount: 22, splotchAlpha: 0.08 },
+  black:    { stops: ['#1f1f1f', '#121212', '#050505'], grainAmount: 18, splotchAlpha: 0.05 },
+  sepia:    { stops: ['#6b4a2a', '#4a331c', '#241812'], grainAmount: 26, splotchAlpha: 0.06 }
+};
+
+function buildConcrete(variant) {
+  const key = variant || (document.getElementById('bgVariant')?.value) || 'concrete';
+  const palette = BG_PALETTES[key] || BG_PALETTES.concrete;
   const off = document.createElement('canvas');
   off.width = W; off.height = H;
   const c = off.getContext('2d');
   // Base gradient
   const grad = c.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, '#7a7a7a');
-  grad.addColorStop(0.5, '#6a6a6a');
-  grad.addColorStop(1, '#555555');
+  grad.addColorStop(0, palette.stops[0]);
+  grad.addColorStop(0.5, palette.stops[1]);
+  grad.addColorStop(1, palette.stops[2]);
   c.fillStyle = grad;
   c.fillRect(0, 0, W, H);
   // Grain
   const imgData = c.getImageData(0, 0, W, H);
   const d = imgData.data;
   for (let i = 0; i < d.length; i += 4) {
-    const n = (Math.random() - 0.5) * 30;
+    const n = (Math.random() - 0.5) * palette.grainAmount;
     d[i] = Math.max(0, Math.min(255, d[i] + n));
     d[i+1] = Math.max(0, Math.min(255, d[i+1] + n));
     d[i+2] = Math.max(0, Math.min(255, d[i+2] + n));
@@ -474,7 +492,7 @@ function buildConcrete() {
     const x = Math.random() * W;
     const y = Math.random() * H;
     const r = 40 + Math.random() * 120;
-    const a = Math.random() * 0.06;
+    const a = Math.random() * palette.splotchAlpha;
     const rad = c.createRadialGradient(x, y, 0, x, y, r);
     rad.addColorStop(0, `rgba(${Math.random() > 0.5 ? 255 : 0}, ${Math.random() > 0.5 ? 255 : 0}, ${Math.random() > 0.5 ? 255 : 0}, ${a})`);
     rad.addColorStop(1, 'rgba(0,0,0,0)');
@@ -1421,6 +1439,10 @@ $('downloadBtn').onclick = async () => {
 [titleFontEl, titleColorEl, titlePosEl, captionColorEl, subsEnabledEl, subsWordsEl, subsColorEl].forEach(el =>
   el.addEventListener('change', drawStaticPreview)
 );
+$('bgVariant').addEventListener('change', () => {
+  buildConcrete($('bgVariant').value);
+  drawStaticPreview();
+});
 darkenEl.addEventListener('input', () => {
   darkenValEl.textContent = darkenEl.value + '%';
   drawStaticPreview();
