@@ -355,12 +355,21 @@
           <div class="field">
             <label>Voice</label>
             <select id="voice">
-              <option value="pNInz6obpgDQGcFmaJgB" selected>Adam (deep)</option>
+              <option value="yBtWe2ymKT0oXUmsi6st" selected>My Voice (Sulong)</option>
+              <option value="pNInz6obpgDQGcFmaJgB">Adam (deep)</option>
               <option value="ErXwobaYiN019PkySvjV">Antoni (warm)</option>
               <option value="VR6AewLTigWG4xSOukaG">Arnold (strong)</option>
               <option value="21m00Tcm4TlvDq8ikWAM">Rachel (calm)</option>
               <option value="AZnzlk1XvdvUeBnXmlld">Domi (bold)</option>
               <option value="EXAVITQu4vr4xnSDxMaL">Bella (soft)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>ElevenLabs Model</label>
+            <select id="elevenModel">
+              <option value="eleven_v3">v3 — Best quality (latest)</option>
+              <option value="eleven_turbo_v2_5" selected>Turbo v2.5 — Fast</option>
+              <option value="eleven_multilingual_v2">Multilingual v2</option>
             </select>
           </div>
           <div class="field">
@@ -956,7 +965,7 @@ function buildWordTimings(alignment) {
 async function generateSpeech(text, voiceId, apiKey, audioCtx) {
   const body = {
     text: text,
-    model_id: 'eleven_turbo_v2_5',
+    model_id: (document.getElementById('elevenModel')?.value || 'eleven_turbo_v2_5'),
     voice_settings: {
       stability: 0.45,
       similarity_boost: 0.75,
