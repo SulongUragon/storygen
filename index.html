@@ -923,7 +923,7 @@ function drawSceneCaption(text, alpha, position = 'bottom') {
   const lineHeight = fontSize * 1.15;
   const blockH = lineHeight * lines.length;
   const isBottom = position === 'bottom';
-  const y = isBottom ? H - blockH - 180 : 280;
+  const y = isBottom ? H - blockH - 260 : 280;
   // Dark band for readability
   ctx.fillStyle = `rgba(0, 0, 0, ${alpha * 0.55})`;
   const pad = 14;
