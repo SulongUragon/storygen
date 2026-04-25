@@ -343,7 +343,10 @@
 
       <div class="panel">
         <h2><span><span class="num">3</span>Script</span>
-          <button id="regenScriptBtn" class="small secondary">Regenerate</button>
+          <div style="display:flex;gap:6px">
+            <button id="customScriptBtn" class="small secondary">+ Custom</button>
+            <button id="regenScriptBtn" class="small secondary">Regenerate</button>
+          </div>
         </h2>
         <div class="field">
           <label>Main Title (shown throughout)</label>
@@ -351,9 +354,27 @@
         </div>
         <div class="field">
           <label>Scenes (edit the JSON carefully)</label>
-          <textarea id="scriptJson" spellcheck="false" placeholder='Click "Generate Everything" first…'></textarea>
+          <textarea id="scriptJson" spellcheck="false" placeholder='Click "Generate Everything" first… or "+ Custom" to bring your own script'></textarea>
         </div>
         <div class="cost-note" id="scriptStatus">No script yet</div>
+
+        <div id="customScriptForm" style="display:none; margin-top: 12px; padding: 14px; background: #0a0a0a; border: 1px solid #2a2a2a; border-radius: 6px;">
+          <div class="cost-note" style="text-align:left;text-transform:none;letter-spacing:normal;font-size:11px;color:#aaa;margin-bottom:10px;line-height:1.5">
+            Paste your own script below. Each <strong>blank-line-separated paragraph</strong> = one scene narration. Claude will auto-generate scene titles + image prompts. Your narration text is preserved exactly.
+          </div>
+          <div class="field">
+            <label>Main Title</label>
+            <input type="text" id="customMainTitle" placeholder="e.g. 5 Stages of Every Relationship">
+          </div>
+          <div class="field">
+            <label>Your Script (paragraphs = scenes)</label>
+            <textarea id="customScriptText" rows="8" placeholder="Stage 1 is the honeymoon phase. Everything feels perfect, you can't get enough of each other.&#10;&#10;Stage 2 is the reality check. Small differences start to surface, you notice things you didn't before.&#10;&#10;Stage 3 is..." style="min-height:140px"></textarea>
+          </div>
+          <div class="row-2">
+            <button id="buildCustomBtn">⚡ Build Script</button>
+            <button id="cancelCustomBtn" class="secondary">Cancel</button>
+          </div>
+        </div>
       </div>
 
       <div class="panel">
@@ -1188,6 +1209,93 @@ async function regenerateScript() {
   }
 }
 
+async function buildCustomScenes(mainTitle, narrations, apiKey) {
+  const prompt = `Main title: "${mainTitle}"
+
+I have ${narrations.length} narrations from a viral dark-psychology video. For each one, return:
+- "title": short scene heading shown on screen, MAX 5 WORDS
+- "narration": KEEP EXACTLY AS-IS. Do not rephrase, shorten, expand, or change a single word.
+- "imagePrompt": clear visual description of ONE simple minimalist cartoon sketch illustration. Describe a single concrete subject (a person, a couple, a tree, an object). Keep under 25 words.
+
+Narrations (in order):
+${narrations.map((n, i) => `[${i + 1}]\n${n}`).join('\n\n')}
+
+Output STRICTLY valid JSON in this exact shape:
+{
+  "scenes": [
+    { "title": "...", "narration": "EXACT TEXT FROM ABOVE", "imagePrompt": "..." }
+  ]
+}
+
+Output ONLY the JSON. No preamble. No markdown code blocks.`;
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 3000,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+  if (!response.ok) {
+    let detail = '';
+    try { detail = (await response.json()).error?.message || ''; } catch (e) {}
+    throw new Error(`Claude ${response.status}: ${detail || response.statusText}`);
+  }
+  const data = await response.json();
+  let text = data.content[0].text.trim();
+  text = text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
+  const parsed = JSON.parse(text);
+  if (!Array.isArray(parsed.scenes)) throw new Error('Claude did not return a scenes array');
+  return parsed.scenes;
+}
+
+async function buildFromCustomScript() {
+  const key = anthropicKeyEl.value.trim();
+  if (!key) { setStatus('Need Anthropic key for image-prompt generation', 'error'); return; }
+  const mainTitle = $('customMainTitle').value.trim();
+  const text = $('customScriptText').value.trim();
+  if (!mainTitle) { setStatus('Enter a main title', 'error'); return; }
+  if (!text) { setStatus('Paste your script text', 'error'); return; }
+
+  // Split on blank lines (allow some whitespace tolerance)
+  const paragraphs = text.split(/\n\s*\n+/).map(p => p.trim()).filter(p => p);
+  if (paragraphs.length === 0) { setStatus('No scenes detected — separate paragraphs with blank lines', 'error'); return; }
+  if (paragraphs.length > 15) { setStatus('Too many scenes (max 15)', 'error'); return; }
+
+  disableControls(true);
+  try {
+    setStatus(`Building ${paragraphs.length}-scene script with Claude…`, 'info');
+    const scenes = await buildCustomScenes(mainTitle, paragraphs, key);
+    script = { mainTitle, scenes };
+    images = new Array(scenes.length).fill(null);
+    imageBlobs = new Array(scenes.length).fill(null);
+    audios = new Array(scenes.length).fill(null);
+    audioMp3s = new Array(scenes.length).fill(null);
+    currentProjectId = null;
+    mainTitleEl.value = mainTitle;
+    scriptJsonEl.value = JSON.stringify(scenes, null, 2);
+    scriptStatusEl.textContent = `✓ Custom script · ${scenes.length} scenes`;
+    previewScene = 0;
+    rebuildSceneNav();
+    rebuildThumbGrid();
+    refreshAudioDownloadBtn();
+    drawStaticPreview();
+    $('customScriptForm').style.display = 'none';
+    setStatus(`Ready — now click Re-gen Images and Re-gen Voice (panel 4)`, 'success');
+  } catch (err) {
+    setStatus('Build failed: ' + err.message, 'error');
+  } finally {
+    disableControls(false);
+  }
+}
+
 async function regenerateAllImages() {
   if (!script) { setStatus('Generate a script first', 'error'); return; }
   const key = falKeyEl.value.trim();
@@ -1265,16 +1373,26 @@ mainTitleEl.addEventListener('change', () => {
   if (script) { script.mainTitle = mainTitleEl.value; drawStaticPreview(); }
 });
 scriptJsonEl.addEventListener('change', () => {
-  if (!script) return;
   try {
     const scenes = JSON.parse(scriptJsonEl.value);
     if (!Array.isArray(scenes)) throw new Error('Must be an array');
-    script.scenes = scenes;
-    // Resize asset arrays
-    while (images.length < scenes.length) images.push(null);
-    while (audios.length < scenes.length) audios.push(null);
-    images = images.slice(0, scenes.length);
-    audios = audios.slice(0, scenes.length);
+    if (!script) {
+      script = { mainTitle: mainTitleEl.value.trim() || 'Untitled', scenes };
+      images = new Array(scenes.length).fill(null);
+      imageBlobs = new Array(scenes.length).fill(null);
+      audios = new Array(scenes.length).fill(null);
+      audioMp3s = new Array(scenes.length).fill(null);
+      currentProjectId = null;
+      scriptStatusEl.textContent = `✓ Script · ${scenes.length} scenes`;
+    } else {
+      script.scenes = scenes;
+      while (images.length < scenes.length) { images.push(null); imageBlobs.push(null); }
+      while (audios.length < scenes.length) { audios.push(null); audioMp3s.push(null); }
+      images = images.slice(0, scenes.length);
+      imageBlobs = imageBlobs.slice(0, scenes.length);
+      audios = audios.slice(0, scenes.length);
+      audioMp3s = audioMp3s.slice(0, scenes.length);
+    }
     previewScene = Math.min(previewScene, scenes.length - 1);
     rebuildSceneNav();
     rebuildThumbGrid();
@@ -1446,6 +1564,15 @@ function disableControls(disable) {
 
 $('generateAllBtn').onclick = runGenerateAll;
 $('regenScriptBtn').onclick = regenerateScript;
+$('customScriptBtn').onclick = () => {
+  const form = $('customScriptForm');
+  form.style.display = form.style.display === 'none' ? '' : 'none';
+  if (form.style.display !== 'none' && !$('customMainTitle').value && script?.mainTitle) {
+    $('customMainTitle').value = script.mainTitle;
+  }
+};
+$('cancelCustomBtn').onclick = () => { $('customScriptForm').style.display = 'none'; };
+$('buildCustomBtn').onclick = buildFromCustomScript;
 $('regenImagesBtn').onclick = regenerateAllImages;
 $('regenVoiceBtn').onclick = regenerateVoice;
 $('previewBtn').onclick = () => runPlayback(false);
