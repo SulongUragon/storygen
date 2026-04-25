@@ -1677,15 +1677,16 @@ async function runGenerateAll() {
     }
     assetsStatusEl.textContent = `✓ ${script.scenes.length} illustrations ready`;
 
-    // Step 3: Voices (in parallel — ElevenLabs has generous limits)
+    // Step 3: Voices (sequential — avoids ElevenLabs concurrent request limit)
     setStatus('Generating voiceovers…', 'info');
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const voiceId = voiceEl.value;
-    const voicePromises = script.scenes.map((s, i) =>
-      generateSpeech(s.narration, voiceId, elevenKey, audioCtx)
-        .then(r => { audios[i] = r.audioBuffer; audioMp3s[i] = r.mp3Buffer; wordTimings[i] = r.wordTimings || null; })
-    );
-    await Promise.all(voicePromises);
+    for (let i = 0; i < script.scenes.length; i++) {
+      setStatus(`Generating voice ${i + 1}/${script.scenes.length}…`, 'info');
+      setProgress(60 + ((i / script.scenes.length) * 35));
+      const r = await generateSpeech(script.scenes[i].narration, voiceId, elevenKey, audioCtx);
+      audios[i] = r.audioBuffer; audioMp3s[i] = r.mp3Buffer; wordTimings[i] = r.wordTimings || null;
+    }
     setProgress(95);
     const totalAudio = audios.reduce((s, a) => s + (a ? a.duration : 0), 0);
     assetsStatusEl.textContent = `✓ ${script.scenes.length} illustrations + ${totalAudio.toFixed(1)}s voiceover`;
@@ -1892,11 +1893,11 @@ async function regenerateVoice() {
     setStatus('Regenerating voiceovers…', 'info');
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const voiceId = voiceEl.value;
-    const voicePromises = script.scenes.map((s, i) =>
-      generateSpeech(s.narration, voiceId, key, audioCtx)
-        .then(r => { audios[i] = r.audioBuffer; audioMp3s[i] = r.mp3Buffer; wordTimings[i] = r.wordTimings || null; })
-    );
-    await Promise.all(voicePromises);
+    for (let i = 0; i < script.scenes.length; i++) {
+      setStatus(`Re-generating voice ${i + 1}/${script.scenes.length}…`, 'info');
+      const r = await generateSpeech(script.scenes[i].narration, voiceId, key, audioCtx);
+      audios[i] = r.audioBuffer; audioMp3s[i] = r.mp3Buffer; wordTimings[i] = r.wordTimings || null;
+    }
     const totalAudio = audios.reduce((s, a) => s + (a ? a.duration : 0), 0);
     assetsStatusEl.textContent = `✓ ${script.scenes.length} illustrations + ${totalAudio.toFixed(1)}s voiceover`;
     refreshAudioDownloadBtn();
