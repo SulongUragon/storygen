@@ -1399,7 +1399,8 @@ function drawSubtitle(text, alpha) {
   ctx.textBaseline = 'middle';
 
   const maxWidth = W - 80;
-  const displayText = allCaps ? text.toUpperCase() : text;
+  const stripped = text.replace(/[.,:;!?"'''…\-–—()\[\]]/g, '').trim();
+  const displayText = allCaps ? stripped.toUpperCase() : stripped;
   const lines = wrapText(displayText, maxWidth);
   const lineHeight = fontSize * 1.2;
   const blockH = lineHeight * lines.length;
@@ -1468,6 +1469,7 @@ function drawHighlightSubtitle(words, spokenCount, alpha) {
   const weight = fontWeightFor(fontFamily, 900);
   ctx.font = `${weight} ${fontSize}px ${fontFamily}`;
   ctx.textBaseline = 'middle';
+  words = words.map(w => w.replace(/[.,:;!?"'''…\-–—()\[\]]/g, '').trim()).filter(w => w);
   if (allCaps) words = words.map(w => w.toUpperCase());
 
   // Layout words across multiple lines, word-wrap-aware
