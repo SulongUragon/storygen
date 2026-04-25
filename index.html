@@ -389,6 +389,25 @@
       </div>
 
       <div class="panel">
+        <h2><span><span class="num">★</span>Post Bundle</span>
+          <button id="copyAllBundleBtn" class="small secondary">Copy TikTok-ready</button>
+        </h2>
+        <div class="field">
+          <label>Caption <button id="copyCaptionBtn" class="small secondary" style="float:right;margin-top:-4px;padding:3px 8px;font-size:9px">Copy</button></label>
+          <textarea id="postCaption" rows="2" placeholder="Generate a script first..." style="min-height:50px"></textarea>
+        </div>
+        <div class="field">
+          <label>10 Keywords <button id="copyKeywordsBtn" class="small secondary" style="float:right;margin-top:-4px;padding:3px 8px;font-size:9px">Copy</button></label>
+          <textarea id="postKeywords" rows="2" placeholder="Generate a script first..." style="min-height:50px"></textarea>
+        </div>
+        <div class="field">
+          <label>5 Hashtags <button id="copyHashtagsBtn" class="small secondary" style="float:right;margin-top:-4px;padding:3px 8px;font-size:9px">Copy</button></label>
+          <textarea id="postHashtags" rows="1" placeholder="Generate a script first..." style="min-height:36px"></textarea>
+        </div>
+        <div class="cost-note">Auto-generated with the script. Edit anytime — saved with the project.</div>
+      </div>
+
+      <div class="panel">
         <h2><span><span class="num">4</span>Illustrations &amp; Voice</span>
           <div style="display:flex;gap:6px">
             <button id="regenImagesBtn" class="small secondary">Re-gen Images</button>
@@ -736,7 +755,7 @@ function loadKeys() {
 async function generateScript(topic, sceneCount, apiKey) {
   const prompt = `You are a viral content creator who makes dark-psychology storytelling videos (think TikTok / Reels / Shorts). Topic: "${topic}".
 
-Write a ${sceneCount}-scene listicle video script that reveals uncomfortable truths about human nature.
+Write a ${sceneCount}-scene listicle video script that reveals uncomfortable truths about human nature, AND a complete post bundle (caption + SEO keywords + hashtags) for the same topic.
 
 Output STRICTLY valid JSON in this exact shape:
 
@@ -748,7 +767,10 @@ Output STRICTLY valid JSON in this exact shape:
       "narration": "spoken voice-over for this scene, 2-3 sentences, 4-6 seconds when read naturally, conversational tone",
       "imagePrompt": "clear visual description of ONE simple minimalist cartoon sketch illustration that represents this scene — describe a single concrete subject (a person, a couple, a tree, an object). Example: 'a young couple smiling and holding hands, cartoon line drawing'. Keep it under 25 words."
     }
-  ]
+  ],
+  "caption": "viral TikTok / Reels post caption, 1-2 short sentences, strong hook + curiosity. NO hashtags inside this field. NO emojis.",
+  "keywords": ["array of EXACTLY 10 SEO/discoverability keywords related to the topic — single words or short phrases (max 3 words each), lowercase, no punctuation, no leading hashtag"],
+  "hashtags": ["array of EXACTLY 5 hashtags WITHOUT the # prefix, lowercase, no spaces; mix broad reach (fyp, foryou) with niche tags specific to the topic"]
 }
 
 CRITICAL RULES:
@@ -757,7 +779,10 @@ CRITICAL RULES:
 - Raw, uncomfortable, honest — but not edgy for its own sake
 - Narration must be SPOKEN — write like people actually talk
 - imagePrompt must be CONCRETE visuals, not abstract concepts
-- No hashtags, no emojis, no quotes inside any field
+- caption: NO hashtags inside the caption text itself, NO emojis, max 220 characters
+- keywords: EXACTLY 10 entries, all lowercase strings, NO # prefix
+- hashtags: EXACTLY 5 entries, all lowercase strings, NO # prefix in the array values
+- No emojis anywhere
 - NO MARKDOWN CODE BLOCKS. Output only the raw JSON starting with { and ending with }`;
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -1424,6 +1449,7 @@ async function runGenerateAll() {
     currentProjectId = null;
     mainTitleEl.value = script.mainTitle;
     scriptJsonEl.value = JSON.stringify(script.scenes, null, 2);
+    populatePostBundle();
     scriptStatusEl.textContent = `✓ Script · ${script.scenes.length} scenes`;
     previewScene = 0;
     rebuildSceneNav();
@@ -1486,6 +1512,7 @@ async function regenerateScript() {
     currentProjectId = null;
     mainTitleEl.value = script.mainTitle;
     scriptJsonEl.value = JSON.stringify(script.scenes, null, 2);
+    populatePostBundle();
     scriptStatusEl.textContent = `✓ Script · ${script.scenes.length} scenes`;
     previewScene = 0;
     rebuildSceneNav();
@@ -1507,6 +1534,8 @@ I have ${narrations.length} narrations from a viral dark-psychology video. For e
 - "narration": KEEP EXACTLY AS-IS. Do not rephrase, shorten, expand, or change a single word.
 - "imagePrompt": clear visual description of ONE simple minimalist cartoon sketch illustration. Describe a single concrete subject (a person, a couple, a tree, an object). Keep under 25 words.
 
+Also produce a complete post bundle for the same topic (caption + SEO keywords + hashtags).
+
 Narrations (in order):
 ${narrations.map((n, i) => `[${i + 1}]\n${n}`).join('\n\n')}
 
@@ -1514,7 +1543,10 @@ Output STRICTLY valid JSON in this exact shape:
 {
   "scenes": [
     { "title": "...", "narration": "EXACT TEXT FROM ABOVE", "imagePrompt": "..." }
-  ]
+  ],
+  "caption": "viral TikTok / Reels post caption, 1-2 short sentences, strong hook + curiosity. NO hashtags or emojis inside. Max 220 chars.",
+  "keywords": ["EXACTLY 10 lowercase strings — single words or short phrases (max 3 words), NO # prefix"],
+  "hashtags": ["EXACTLY 5 lowercase strings WITHOUT the # prefix; mix broad and niche"]
 }
 
 Output ONLY the JSON. No preamble. No markdown code blocks.`;
@@ -1543,7 +1575,7 @@ Output ONLY the JSON. No preamble. No markdown code blocks.`;
   text = text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
   const parsed = JSON.parse(text);
   if (!Array.isArray(parsed.scenes)) throw new Error('Claude did not return a scenes array');
-  return parsed.scenes;
+  return parsed; // { scenes, caption, keywords, hashtags }
 }
 
 async function buildFromCustomScript() {
@@ -1562,8 +1594,14 @@ async function buildFromCustomScript() {
   disableControls(true);
   try {
     setStatus(`Building ${paragraphs.length}-scene script with Claude…`, 'info');
-    const scenes = await buildCustomScenes(mainTitle, paragraphs, key);
-    script = { mainTitle, scenes };
+    const result = await buildCustomScenes(mainTitle, paragraphs, key);
+    const scenes = result.scenes;
+    script = {
+      mainTitle, scenes,
+      caption: result.caption || '',
+      keywords: Array.isArray(result.keywords) ? result.keywords : [],
+      hashtags: Array.isArray(result.hashtags) ? result.hashtags : []
+    };
     images = new Array(scenes.length).fill(null);
     imageBlobs = new Array(scenes.length).fill(null);
     audios = new Array(scenes.length).fill(null);
@@ -1571,6 +1609,7 @@ async function buildFromCustomScript() {
     currentProjectId = null;
     mainTitleEl.value = mainTitle;
     scriptJsonEl.value = JSON.stringify(scenes, null, 2);
+    populatePostBundle();
     scriptStatusEl.textContent = `✓ Custom script · ${scenes.length} scenes`;
     previewScene = 0;
     rebuildSceneNav();
@@ -1657,6 +1696,62 @@ async function regenerateVoice() {
     disableControls(false);
   }
 }
+
+// =========================================================
+//  Post Bundle (caption / keywords / hashtags)
+// =========================================================
+function populatePostBundle() {
+  if (!script) {
+    $('postCaption').value = '';
+    $('postKeywords').value = '';
+    $('postHashtags').value = '';
+    return;
+  }
+  $('postCaption').value = script.caption || '';
+  $('postKeywords').value = Array.isArray(script.keywords) ? script.keywords.join(', ') : (script.keywords || '');
+  $('postHashtags').value = Array.isArray(script.hashtags) ? script.hashtags.map(t => '#' + String(t).replace(/^#/, '')).join(' ') : (script.hashtags || '');
+}
+
+// Save edits back to script object
+$('postCaption').addEventListener('input', () => { if (script) script.caption = $('postCaption').value; });
+$('postKeywords').addEventListener('input', () => {
+  if (!script) return;
+  script.keywords = $('postKeywords').value.split(/[,\n]/).map(s => s.trim()).filter(Boolean);
+});
+$('postHashtags').addEventListener('input', () => {
+  if (!script) return;
+  script.hashtags = $('postHashtags').value.split(/\s+/).map(s => s.trim().replace(/^#/, '')).filter(Boolean);
+});
+
+function copyText(text) {
+  if (!text) { setStatus('Nothing to copy', 'error'); return; }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(
+      () => { setStatus('Copied to clipboard', 'success'); setTimeout(() => setStatus(''), 1200); },
+      () => fallbackCopy(text)
+    );
+  } else {
+    fallbackCopy(text);
+  }
+}
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); setStatus('Copied to clipboard', 'success'); }
+  catch (e) { setStatus('Copy failed', 'error'); }
+  ta.remove();
+  setTimeout(() => setStatus(''), 1200);
+}
+$('copyCaptionBtn').onclick = () => copyText($('postCaption').value);
+$('copyKeywordsBtn').onclick = () => copyText($('postKeywords').value);
+$('copyHashtagsBtn').onclick = () => copyText($('postHashtags').value);
+$('copyAllBundleBtn').onclick = () => {
+  const cap = $('postCaption').value.trim();
+  const tags = $('postHashtags').value.trim();
+  const combined = cap + (tags ? '\n\n' + tags : '');
+  copyText(combined);
+};
 
 // Save script edits
 mainTitleEl.addEventListener('change', () => {
@@ -2293,6 +2388,7 @@ async function loadProject(id) {
     applySettings(project.settings);
     mainTitleEl.value = script.mainTitle || '';
     scriptJsonEl.value = JSON.stringify(script.scenes, null, 2);
+    populatePostBundle();
     scriptStatusEl.textContent = `✓ Script · ${script.scenes.length} scenes`;
     const totalAudio = audios.reduce((s, a) => s + (a ? a.duration : 0), 0);
     assetsStatusEl.textContent = `✓ ${images.filter(i => i).length} illustrations + ${totalAudio.toFixed(1)}s voiceover`;
