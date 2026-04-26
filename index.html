@@ -2755,36 +2755,26 @@ const BUILT_IN_PRESETS = {
   }
 };
 
-async function listPresets() {
-  const db = await openIDB();
-  return new Promise((res, rej) => {
-    const tx = db.transaction('presets', 'readonly');
-    const r = tx.objectStore('presets').getAll();
-    r.onsuccess = () => res(r.result || []);
-    r.onerror = () => rej(r.error);
-  });
+// Presets stored in localStorage — simpler and more reliable than IndexedDB
+function listPresets() {
+  try {
+    return JSON.parse(localStorage.getItem('darkpsycho_presets') || '[]');
+  } catch { return []; }
 }
-async function savePreset(name, settings) {
-  const db = await openIDB();
-  return new Promise((res, rej) => {
-    const tx = db.transaction('presets', 'readwrite');
-    tx.objectStore('presets').put({ name, settings, updatedAt: Date.now() });
-    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
-  });
+function savePreset(name, settings) {
+  const presets = listPresets().filter(p => p.name !== name);
+  presets.push({ name, settings, updatedAt: Date.now() });
+  localStorage.setItem('darkpsycho_presets', JSON.stringify(presets));
 }
-async function deletePresetIDB(name) {
-  const db = await openIDB();
-  return new Promise((res, rej) => {
-    const tx = db.transaction('presets', 'readwrite');
-    tx.objectStore('presets').delete(name);
-    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
-  });
+function deletePresetIDB(name) {
+  const presets = listPresets().filter(p => p.name !== name);
+  localStorage.setItem('darkpsycho_presets', JSON.stringify(presets));
 }
 
-async function refreshPresetSelect() {
+function refreshPresetSelect() {
   const sel = $('presetSelect');
   if (!sel) return;
-  const customPresets = await listPresets();
+  const customPresets = listPresets();
   sel.innerHTML = '<option value="">— Pick preset to apply —</option>';
   // Built-ins first
   const builtinGroup = document.createElement('optgroup');
@@ -2809,14 +2799,14 @@ async function refreshPresetSelect() {
   }
 }
 
-async function applyPresetByValue(value) {
+function applyPresetByValue(value) {
   if (!value) return;
   const [kind, ...rest] = value.split(':');
   const name = rest.join(':');
   let settings = null;
   if (kind === 'builtin') settings = BUILT_IN_PRESETS[name];
   else {
-    const stored = (await listPresets()).find(p => p.name === name);
+    const stored = listPresets().find(p => p.name === name);
     settings = stored?.settings;
   }
   if (!settings) { setStatus('Preset not found', 'error'); return; }
@@ -2826,7 +2816,7 @@ async function applyPresetByValue(value) {
   setTimeout(() => setStatus(''), 1500);
 }
 
-async function saveCurrentPreset() {
+function saveCurrentPreset() {
   const name = prompt('Name your preset:');
   if (!name) return;
   const trimmed = name.trim();
@@ -2835,14 +2825,14 @@ async function saveCurrentPreset() {
     setStatus('Cannot overwrite a built-in preset name', 'error');
     return;
   }
-  await savePreset(trimmed, collectSettings());
-  await refreshPresetSelect();
+  savePreset(trimmed, collectSettings());
+  refreshPresetSelect();
   $('presetSelect').value = 'custom:' + trimmed;
   setStatus(`Saved preset: ${trimmed}`, 'success');
   setTimeout(() => setStatus(''), 1500);
 }
 
-async function deleteSelectedPreset() {
+function deleteSelectedPreset() {
   const value = $('presetSelect').value;
   if (!value || !value.startsWith('custom:')) {
     setStatus('Pick a saved preset to delete (built-ins cannot be removed)', 'error');
@@ -2850,8 +2840,8 @@ async function deleteSelectedPreset() {
   }
   const name = value.slice('custom:'.length);
   if (!confirm(`Delete preset "${name}"?`)) return;
-  await deletePresetIDB(name);
-  await refreshPresetSelect();
+  deletePresetIDB(name);
+  refreshPresetSelect();
   setStatus(`Deleted: ${name}`, 'success');
   setTimeout(() => setStatus(''), 1500);
 }
