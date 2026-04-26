@@ -3559,19 +3559,36 @@ async function postViaAyrshare(videoUrl, caption, platforms, scheduleDate, apiKe
     mediaUrls: [videoUrl],
     isVideo: true
   };
-  // scheduleDate requires Ayrshare Premium — omit for free plan
-  // if (scheduleDate) body.scheduleDate = scheduleDate;
 
-  const res = await fetch('https://app.ayrshare.com/api/post', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + apiKey
-    },
-    body: JSON.stringify(body)
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error('Ayrshare: ' + (data.message || data.error || res.statusText));
+  let res, data;
+  try {
+    res = await fetch('https://app.ayrshare.com/api/post', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey
+      },
+      body: JSON.stringify(body)
+    });
+    data = await res.json().catch(() => ({}));
+  } catch (networkErr) {
+    // CORS or network error — fall back to Make.com webhook
+    const webhook = document.getElementById('makeWebhook')?.value.trim()
+      || localStorage.getItem('make_webhook') || '';
+    if (!webhook) throw new Error('Network error + no Make.com webhook configured');
+    const r2 = await fetch(webhook, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'post', ayrshare_key: apiKey, video_url: videoUrl, caption, platforms, is_video: true })
+    });
+    if (!r2.ok) throw new Error('Post failed via Make.com: ' + r2.status);
+    return await r2.json().catch(() => ({}));
+  }
+
+  if (!res.ok || data.status === 'error') {
+    const msg = data.message || data.error || data.errors?.join(', ') || JSON.stringify(data) || res.status;
+    throw new Error('Ayrshare error: ' + msg);
+  }
   return data;
 }
 
