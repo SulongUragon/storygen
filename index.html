@@ -376,7 +376,7 @@
           <button id="downloadBtn" class="secondary" disabled>↓ Download Video</button>
         </div>
         <button id="downloadAudioBtn" class="secondary" disabled style="margin-top:10px">↓ Audio Only (WAV) · for CapCut</button>
-        <button id="scheduleBtn" class="secondary" disabled style="margin-top:10px;background:linear-gradient(135deg,#1a0a3a,#0d0520);border-color:#4a2080;">☁️ Upload &amp; Schedule Post</button>
+        <button id="scheduleBtn" class="secondary" disabled style="margin-top:10px;background:linear-gradient(135deg,#0a1a3a,#051020);border-color:#204080;">☁️ Upload &amp; Post Now</button>
         <div class="cost-note" style="margin-top:6px">If CapCut chops the audio: import the video, MUTE its track, then add this WAV as new audio at 0:00</div>
       </div>
     </div>
@@ -808,16 +808,15 @@
   <!-- ══ SCHEDULE MODAL ══ -->
   <div id="scheduleModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:100;align-items:center;justify-content:center;">
     <div style="background:#111;border:1px solid #2a2a2a;border-radius:14px;padding:28px;width:100%;max-width:420px;margin:20px;">
-      <h2 style="font-size:14px;font-weight:800;letter-spacing:3px;text-transform:uppercase;color:#e5e5e5;margin-bottom:20px;">☁️ Upload &amp; Schedule</h2>
+      <h2 style="font-size:14px;font-weight:800;letter-spacing:3px;text-transform:uppercase;color:#e5e5e5;margin-bottom:20px;">☁️ Upload &amp; Post</h2>
 
       <div class="field" style="margin-bottom:14px;">
         <label>Caption</label>
         <textarea id="schedCaption" style="min-height:80px;font-size:12px;" placeholder="Post caption…"></textarea>
       </div>
 
-      <div class="field" style="margin-bottom:14px;">
-        <label>Schedule Time</label>
-        <input type="datetime-local" id="schedTime" style="width:100%;background:#080808;border:1px solid #252525;color:#e5e5e5;padding:10px 12px;border-radius:6px;font-family:inherit;font-size:13px;">
+      <div style="background:#0a1a0a;border:1px solid #1a3a1a;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:11px;color:#60cc80;letter-spacing:0.5px;">
+        ✅ Video will be posted immediately after upload.
       </div>
 
       <div class="field" style="margin-bottom:20px;">
@@ -836,7 +835,7 @@
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
         <button class="secondary" id="schedCancelBtn">Cancel</button>
-        <button id="schedConfirmBtn">🚀 Schedule</button>
+        <button id="schedConfirmBtn">🚀 Post Now</button>
       </div>
     </div>
   </div>
@@ -3510,7 +3509,8 @@ async function postViaAyrshare(videoUrl, caption, platforms, scheduleDate, apiKe
     mediaUrls: [videoUrl],
     isVideo: true
   };
-  if (scheduleDate) body.scheduleDate = scheduleDate;
+  // scheduleDate requires Ayrshare Premium — omit for free plan
+  // if (scheduleDate) body.scheduleDate = scheduleDate;
 
   const res = await fetch('https://app.ayrshare.com/api/post', {
     method: 'POST',
@@ -3566,7 +3566,6 @@ async function executeSchedule() {
 
   if (!preset) { document.getElementById('schedStatus').textContent = '⚠ Add Cloudinary upload preset in API Keys'; return; }
   if (!ayrshareKey) { document.getElementById('schedStatus').textContent = '⚠ Add Ayrshare API key in API Keys'; return; }
-  if (!schedTime) { document.getElementById('schedStatus').textContent = '⚠ Set a schedule time'; return; }
   if (platforms.length === 0) { document.getElementById('schedStatus').textContent = '⚠ Select at least one platform'; return; }
   if (!currentBlob) { document.getElementById('schedStatus').textContent = '⚠ Record a video first'; return; }
 
@@ -3584,12 +3583,10 @@ async function executeSchedule() {
     // Step 2: Post via Ayrshare
     document.getElementById('schedStatus').textContent = '📡 Scheduling via Ayrshare…';
     const fullCaption = [caption, script?.hashtags?.map(h => '#'+h).join(' ')].filter(Boolean).join('\n\n');
-    const schedISO = new Date(schedTime).toISOString();
-    await postViaAyrshare(videoUrl, fullCaption, platforms, schedISO, ayrshareKey);
+    await postViaAyrshare(videoUrl, fullCaption, platforms, null, ayrshareKey);
     bar.style.width = '100%';
 
-    const timeStr = new Date(schedTime).toLocaleString('en-PH', { dateStyle:'medium', timeStyle:'short' });
-    document.getElementById('schedStatus').textContent = `✅ Scheduled for ${timeStr} on ${platforms.join(' + ')}!`;
+    document.getElementById('schedStatus').textContent = `✅ Posted to ${platforms.join(' + ')}! Check your accounts.`;
     setTimeout(() => closeScheduleModal(), 3000);
   } catch (err) {
     document.getElementById('schedStatus').textContent = '❌ ' + err.message;
