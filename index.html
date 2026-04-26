@@ -312,6 +312,12 @@
     .cal-actions { flex-wrap: wrap; }
   }
 
+
+  .cal-ampm-label { font-size:8px; font-weight:800; letter-spacing:1px; text-transform:uppercase; padding:2px 6px; border-radius:4px; flex-shrink:0; }
+  .cal-ampm-label.am { background:#2a0000; color:#cc4040; }
+  .cal-ampm-label.pm { background:#001020; color:#4080cc; }
+  .cal-day-row.debate { grid-template-columns: 52px auto 1fr auto auto; }
+
   .hidden { display: none !important; }
   .progress-track {
     height: 4px; background: #1a1a1a; border-radius: 2px; overflow: hidden;
@@ -743,22 +749,35 @@
       </div>
     </h2>
 
-    <!-- Mode toggle -->
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;background:#0d0d0d;border:1px solid #1e1e1e;border-radius:8px;padding:10px 12px;">
-      <div style="flex:1">
-        <div style="font-size:11px;font-weight:700;color:#ccc;">📺 Weekly Series Mode</div>
-        <div style="font-size:10px;color:#555;margin-top:2px;">One topic, 7 connected episodes with story flow</div>
-      </div>
-      <label class="toggle-switch">
-        <input type="checkbox" id="calSeriesMode" checked>
-        <div class="toggle-track"></div>
-      </label>
+    <!-- Calendar Mode Selector -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+      <button class="cal-btn primary" id="calModeVariety" data-mode="variety">🎲 Variety<br><span style="font-size:8px;opacity:0.7">7 diff topics</span></button>
+      <button class="cal-btn" id="calModeSeries" data-mode="series">📺 Series<br><span style="font-size:8px;opacity:0.7">1 topic, 7 eps</span></button>
+      <button class="cal-btn" id="calModeDebate" data-mode="debate">⚔️ Debate<br><span style="font-size:8px;opacity:0.7">2× daily</span></button>
     </div>
 
-    <!-- Series topic input (shown in series mode) -->
-    <div id="calSeriesBlock" style="margin-bottom:14px;">
+    <!-- Variety mode: no extra inputs -->
+
+    <!-- Series topic input -->
+    <div id="calSeriesBlock" style="margin-bottom:14px;display:none;">
       <label style="display:block;font-size:10px;color:#666;text-transform:uppercase;letter-spacing:2px;font-weight:600;margin-bottom:6px;">Series Topic</label>
       <input type="text" id="calSeriesTopic" class="cal-topic-input" style="font-size:13px;padding:12px;" placeholder="e.g. Dark Psychology ng Filipino Culture" value="">
+    </div>
+
+    <!-- Debate mode inputs -->
+    <div id="calDebateBlock" style="margin-bottom:14px;display:none;">
+      <label style="display:block;font-size:10px;color:#666;text-transform:uppercase;letter-spacing:2px;font-weight:600;margin-bottom:8px;">Debate Topic &amp; Two Sides</label>
+      <input type="text" id="calDebateTopic" class="cal-topic-input" style="margin-bottom:8px;font-size:13px;padding:12px;" placeholder="e.g. Introvert vs Extrovert" value="">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div>
+          <label style="display:block;font-size:9px;color:#8b0000;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:4px;">☀️ Morning Side</label>
+          <input type="text" id="calDebateSideA" class="cal-topic-input" placeholder="e.g. Extrovert" value="">
+        </div>
+        <div>
+          <label style="display:block;font-size:9px;color:#336699;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:4px;">🌙 Evening Side</label>
+          <input type="text" id="calDebateSideB" class="cal-topic-input" placeholder="e.g. Introvert" value="">
+        </div>
+      </div>
     </div>
 
     <div id="calDayRows"></div>
@@ -3060,10 +3079,99 @@ function initCalendar() {
 }
 
 let calData = initCalendar();
+let calMode = 'variety'; // 'variety' | 'series' | 'debate'
 
 function todayDayIndex() {
   const d = new Date().getDay(); // 0=Sun
   return d === 0 ? 6 : d - 1;   // convert to Mon=0
+}
+
+function makeCalRow(dayIdx, slotKey, dayLabel, ampm, topic, status, posted, isToday, seriesMain) {
+  const row = document.createElement('div');
+  row.className = 'cal-day-row' + (ampm ? ' debate' : '');
+
+  // Day label
+  const label = document.createElement('div');
+  label.className = 'cal-day-label' + (isToday ? ' today' : '');
+  label.textContent = dayLabel + (isToday ? ' ★' : '');
+  row.appendChild(label);
+
+  // AM/PM badge (debate mode only)
+  if (ampm) {
+    const badge = document.createElement('span');
+    badge.className = 'cal-ampm-label ' + ampm;
+    badge.textContent = ampm === 'am' ? '☀️ AM' : '🌙 PM';
+    row.appendChild(badge);
+  }
+
+  // Topic input
+  const inp = document.createElement('input');
+  inp.type = 'text';
+  inp.className = 'cal-topic-input';
+  inp.placeholder = ampm ? (ampm === 'am' ? 'Morning angle…' : 'Evening angle…') : ('Topic for ' + CAL_DAYS[dayIdx] + '…');
+  inp.value = topic || '';
+  inp.addEventListener('input', () => {
+    const t = inp.value.trim();
+    if (ampm) {
+      calData.days[dayIdx][ampm + 'Topic'] = t;
+      calData.days[dayIdx][ampm + 'Status'] = t ? 'planned' : 'empty';
+    } else {
+      calData.days[dayIdx].topic = t;
+      calData.days[dayIdx].status = t ? 'planned' : 'empty';
+    }
+    saveCalendar(calData);
+    updateStatusPill(row, t ? 'planned' : 'empty', posted);
+  });
+  row.appendChild(inp);
+
+  // Status pill
+  const pill = document.createElement('span');
+  updateStatusPill(row, status, posted, pill);
+  pill.className = 'cal-status ' + (posted ? 'posted' : status);
+  pill.textContent = posted ? 'POSTED' : status === 'done' ? 'DONE' : status === 'planned' ? 'PLANNED' : 'EMPTY';
+  row.appendChild(pill);
+
+  // Actions
+  const actions = document.createElement('div');
+  actions.className = 'cal-actions';
+
+  const loadBtn = document.createElement('button');
+  loadBtn.className = 'cal-btn';
+  loadBtn.textContent = '↗';
+  loadBtn.title = 'Load into generator';
+  loadBtn.disabled = !topic;
+  loadBtn.onclick = () => {
+    const topicEl = document.getElementById('topic');
+    if (topicEl && topic) {
+      topicEl.value = seriesMain ? `${topic} (Part of series: "${seriesMain}")` : topic;
+      document.querySelector('.panel').scrollIntoView({ behavior: 'smooth' });
+      topicEl.focus();
+      loadBtn.textContent = '✓'; setTimeout(() => loadBtn.textContent = '↗', 1200);
+    }
+  };
+  actions.appendChild(loadBtn);
+
+  const genBtn = document.createElement('button');
+  genBtn.className = 'cal-btn primary';
+  genBtn.textContent = '⚡';
+  genBtn.title = 'Generate video';
+  genBtn.disabled = !topic;
+  genBtn.onclick = () => calGenerateDaySlot(dayIdx, ampm, seriesMain);
+  actions.appendChild(genBtn);
+
+  const postedBtn = document.createElement('button');
+  postedBtn.className = 'cal-btn' + (posted ? ' primary' : '');
+  postedBtn.textContent = posted ? '✓' : '○';
+  postedBtn.title = posted ? 'Unmark posted' : 'Mark as posted';
+  postedBtn.onclick = () => {
+    if (ampm) calData.days[dayIdx][ampm + 'Posted'] = !calData.days[dayIdx][ampm + 'Posted'];
+    else calData.days[dayIdx].posted = !calData.days[dayIdx].posted;
+    saveCalendar(calData); renderCalendar();
+  };
+  actions.appendChild(postedBtn);
+
+  row.appendChild(actions);
+  return row;
 }
 
 function renderCalendar() {
@@ -3071,87 +3179,33 @@ function renderCalendar() {
   if (!container) return;
   const todayIdx = todayDayIndex();
   container.innerHTML = '';
-  calData.days.forEach((day, i) => {
-    const isToday = i === todayIdx;
-    const row = document.createElement('div');
-    row.className = 'cal-day-row';
-    row.dataset.idx = i;
 
-    // Day label
-    const label = document.createElement('div');
-    label.className = 'cal-day-label' + (isToday ? ' today' : '');
-    label.textContent = day.short + (isToday ? ' ★' : '');
-    row.appendChild(label);
-
-    // Topic input
-    const inp = document.createElement('input');
-    inp.type = 'text';
-    inp.className = 'cal-topic-input';
-    inp.placeholder = 'Topic for ' + day.day + '…';
-    inp.value = day.topic || '';
-    inp.addEventListener('input', () => {
-      calData.days[i].topic = inp.value.trim();
-      calData.days[i].status = inp.value.trim() ? 'planned' : 'empty';
-      saveCalendar(calData);
-      updateStatusPill(row, calData.days[i]);
+  if (calMode === 'debate') {
+    calData.days.forEach((day, i) => {
+      const isToday = i === todayIdx;
+      // AM row
+      container.appendChild(makeCalRow(i, 'am', day.short + (isToday?' ★':''), 'am',
+        day.amTopic || '', day.amStatus || 'empty', day.amPosted || false, isToday, day.seriesMain));
+      // PM row
+      container.appendChild(makeCalRow(i, 'pm', '', 'pm',
+        day.pmTopic || '', day.pmStatus || 'empty', day.pmPosted || false, false, day.seriesMain));
     });
-    row.appendChild(inp);
-
-    // Status pill
-    const pill = document.createElement('span');
-    pill.className = 'cal-status ' + day.status;
-    pill.textContent = day.posted ? 'POSTED' : day.status === 'done' ? 'DONE' : day.status === 'planned' ? 'PLANNED' : 'EMPTY';
-    if (day.posted) pill.className = 'cal-status posted';
-    row.appendChild(pill);
-
-    // Actions
-    const actions = document.createElement('div');
-    actions.className = 'cal-actions';
-
-    // Load into generator button
-    const loadBtn = document.createElement('button');
-    loadBtn.className = 'cal-btn';
-    loadBtn.textContent = '↗ Load';
-    loadBtn.title = 'Load this topic into the generator';
-    loadBtn.disabled = !day.topic;
-    loadBtn.onclick = () => {
-      const topicEl = document.getElementById('topic');
-      if (topicEl && day.topic) {
-        topicEl.value = day.topic;
-        document.querySelector('.panel').scrollIntoView({ behavior: 'smooth' });
-        topicEl.focus();
-        // Flash feedback
-        loadBtn.textContent = '✓ Loaded';
-        setTimeout(() => loadBtn.textContent = '↗ Load', 1200);
-      }
-    };
-    actions.appendChild(loadBtn);
-
-    // Generate button
-    const genBtn = document.createElement('button');
-    genBtn.className = 'cal-btn primary';
-    genBtn.textContent = '⚡';
-    genBtn.title = 'Generate video for this day';
-    genBtn.disabled = !day.topic;
-    genBtn.onclick = () => calGenerateDay(i);
-    actions.appendChild(genBtn);
-
-    // Posted toggle
-    const postedBtn = document.createElement('button');
-    postedBtn.className = 'cal-btn' + (day.posted ? ' primary' : '');
-    postedBtn.textContent = day.posted ? '✓' : '○';
-    postedBtn.title = day.posted ? 'Mark as not posted' : 'Mark as posted';
-    postedBtn.onclick = () => {
-      calData.days[i].posted = !calData.days[i].posted;
-      saveCalendar(calData);
-      renderCalendar();
-    };
-    actions.appendChild(postedBtn);
-
-    row.appendChild(actions);
-    container.appendChild(row);
-  });
+  } else {
+    calData.days.forEach((day, i) => {
+      const isToday = i === todayIdx;
+      container.appendChild(makeCalRow(i, null, day.short + (isToday?' ★':''), null,
+        day.topic || '', day.status || 'empty', day.posted || false, isToday, day.seriesMain));
+    });
+  }
   updateCalStatus();
+}
+
+function updateStatusPill(row, status, posted, pill) {
+  const p = pill || row.querySelector('.cal-status');
+  if (!p) return;
+  const s = posted ? 'posted' : status;
+  p.className = 'cal-status ' + s;
+  p.textContent = s === 'posted' ? 'POSTED' : s === 'done' ? 'DONE' : s === 'planned' ? 'PLANNED' : 'EMPTY';
 }
 
 function updateStatusPill(row, day) {
@@ -3164,22 +3218,21 @@ function updateStatusPill(row, day) {
 }
 
 function updateCalStatus() {
-  const el = document.getElementById('calStatus');
-  if (!el) return;
-  const total = calData.days.length;
-  const planned = calData.days.filter(d => d.topic).length;
-  const done = calData.days.filter(d => d.status === 'done').length;
-  const posted = calData.days.filter(d => d.posted).length;
-  el.textContent = `Week: ${planned}/7 planned · ${done}/7 generated · ${posted}/7 posted`;
+  // Don't overwrite user-set status messages from plan/generate actions
 }
 
 // ── Plan Week: Claude generates topics (series OR variety) ────────────────────
 async function calPlanWeek() {
   const key = document.getElementById('anthropicKey')?.value.trim();
   if (!key) { alert('Add your Anthropic API key first (Section 1)'); return; }
-  const isSeriesMode = document.getElementById('calSeriesMode')?.checked;
+  const isDebateMode = calMode === 'debate';
+  const isSeriesMode = calMode === 'series';
   const seriesTopic = document.getElementById('calSeriesTopic')?.value.trim();
+  const debateTopic = document.getElementById('calDebateTopic')?.value.trim();
+  const sideA = document.getElementById('calDebateSideA')?.value.trim() || 'Side A';
+  const sideB = document.getElementById('calDebateSideB')?.value.trim() || 'Side B';
   if (isSeriesMode && !seriesTopic) { alert('Enter your series topic first.'); return; }
+  if (isDebateMode && !debateTopic) { alert('Enter your debate topic first.'); return; }
 
   const planBtn = document.getElementById('calPlanBtn');
   planBtn.disabled = true; planBtn.textContent = '…Planning';
@@ -3203,6 +3256,23 @@ Output STRICTLY valid JSON — an array of exactly 7 strings:
 
 Story arc example pattern: Setup → Deepen → Reveal → Twist → Consequence → Solution → Call to action
 NO MARKDOWN. Raw JSON array only.`;
+    } else if (isDebateMode) {
+      prompt = `You are a viral content strategist. A creator posts TWICE per day using a debate format.
+
+Topic: "${debateTopic}"
+Morning posts argue the perspective of: "${sideA}"
+Evening posts argue the perspective of: "${sideB}"
+
+Create 7 days of debate content. Each day covers a DIFFERENT aspect or angle of the topic. The morning and evening posts for the same day should cover the SAME aspect — but from opposing sides.
+
+Output STRICTLY valid JSON — an array of exactly 7 objects:
+[
+  { "aspect": "shared aspect/angle for this day (e.g. At Work)", "am": "${sideA} perspective on this aspect — viral hook title, MAX 10 words", "pm": "${sideB} perspective on same aspect — viral hook title, MAX 10 words" }
+]
+
+- All 7 aspects must be distinctly different (social life, work, relationships, self-care, communication, creativity, energy)
+- Make each title a strong viral hook that sparks debate
+- NO MARKDOWN. Raw JSON array only.`;
     } else {
       const today = CAL_DAYS[todayDayIndex()];
       prompt = `You are a viral dark-psychology content strategist. Generate a 7-day content calendar of unique, varied dark-psychology video topics for a creator on TikTok/Reels.
@@ -3224,26 +3294,37 @@ Output STRICTLY valid JSON — an array of exactly 7 strings, one topic per day 
     });
     const data = await res.json();
     let text = data.content[0].text.trim().replace(/^```json?\s*/i,'').replace(/```$/,'').trim();
-    const topics = JSON.parse(text);
-    if (!Array.isArray(topics) || topics.length !== 7) throw new Error('Bad response');
+    const parsed = JSON.parse(text);
+    if (!Array.isArray(parsed) || parsed.length !== 7) throw new Error('Bad response');
 
     const todayIdx = todayDayIndex();
-    calData.days.forEach((day, i) => {
-      const topicIdx = isSeriesMode ? i : (i - todayIdx + 7) % 7;
-      // For series: prefix with "Ep.N — " for clarity; always overwrite in series mode
-      if (isSeriesMode) {
-        day.topic = `Ep.${i+1} — ${topics[topicIdx]}`;
-        if (isSeriesMode) day.seriesMain = seriesTopic;
-      } else if (!day.topic) {
-        day.topic = topics[topicIdx];
-      }
-      day.status = 'planned';
-    });
+    if (isDebateMode) {
+      calData.days.forEach((day, i) => {
+        const p = parsed[i];
+        day.amTopic = p.am || ''; day.amStatus = 'planned'; day.amPosted = false;
+        day.pmTopic = p.pm || ''; day.pmStatus = 'planned'; day.pmPosted = false;
+        day.debateAspect = p.aspect || '';
+        day.seriesMain = debateTopic;
+      });
+    } else {
+      calData.days.forEach((day, i) => {
+        const topicIdx = isSeriesMode ? i : (i - todayIdx + 7) % 7;
+        if (isSeriesMode) {
+          day.topic = `Ep.${i+1} — ${parsed[topicIdx]}`;
+          day.seriesMain = seriesTopic;
+        } else if (!day.topic) {
+          day.topic = parsed[topicIdx];
+        }
+        day.status = 'planned';
+      });
+    }
     saveCalendar(calData);
     renderCalendar();
-    const msg = isSeriesMode
-      ? `✓ 7-episode series planned for "${seriesTopic}"! Edit episodes or click ⚡ to generate.`
-      : '✓ Week planned! Edit topics or click ⚡ to generate.';
+    const msg = isDebateMode
+      ? `✓ 14 posts planned (7 days × 2) for "${debateTopic}" — ${sideA} in the morning, ${sideB} in the evening!`
+      : isSeriesMode
+        ? `✓ 7-episode series planned for "${seriesTopic}"!`
+        : '✓ Week planned!';
     document.getElementById('calStatus').textContent = msg;
   } catch (err) {
     alert('Error planning week: ' + err.message);
@@ -3253,23 +3334,23 @@ Output STRICTLY valid JSON — an array of exactly 7 strings, one topic per day 
 }
 
 // ── Generate single day ────────────────────────────────────────────────────────
-async function calGenerateDay(idx) {
+async function calGenerateDaySlot(idx, ampm, seriesMain) {
   const day = calData.days[idx];
-  if (!day.topic) return;
+  const topic = ampm ? day[ampm + 'Topic'] : day.topic;
+  if (!topic) return;
   const topicEl = document.getElementById('topic');
   if (topicEl) {
-    // In series mode, give Claude the full context: series topic + episode
-    if (day.seriesMain) {
-      topicEl.value = `${day.topic} (Part of series: "${day.seriesMain}")`;
-    } else {
-      topicEl.value = day.topic;
-    }
+    topicEl.value = seriesMain ? `${topic} (Part of series: "${seriesMain}")` : topic;
   }
   await runGenerateAll();
-  calData.days[idx].status = 'done';
+  if (ampm) calData.days[idx][ampm + 'Status'] = 'done';
+  else calData.days[idx].status = 'done';
   saveCalendar(calData);
   renderCalendar();
 }
+
+// Legacy alias
+async function calGenerateDay(idx) { await calGenerateDaySlot(idx, null, calData.days[idx].seriesMain); }
 
 // ── Generate All 7 days sequentially ──────────────────────────────────────────
 async function calGenerateAll() {
@@ -3279,12 +3360,22 @@ async function calGenerateAll() {
   btn.disabled = true;
   prog.style.display = 'block';
 
-  const days = calData.days.filter(d => d.topic && d.status !== 'done');
-  for (let j = 0; j < days.length; j++) {
-    const idx = calData.days.indexOf(days[j]);
-    document.getElementById('calStatus').textContent = `Generating day ${j+1}/${days.length}: ${days[j].day} — ${days[j].topic}`;
-    bar.style.width = ((j / days.length) * 100) + '%';
-    await calGenerateDay(idx);
+  const slots = [];
+  if (calMode === 'debate') {
+    calData.days.forEach((d, i) => {
+      if (d.amTopic && d.amStatus !== 'done') slots.push({ idx: i, ampm: 'am', topic: d.amTopic, day: d.short + ' ☀️' });
+      if (d.pmTopic && d.pmStatus !== 'done') slots.push({ idx: i, ampm: 'pm', topic: d.pmTopic, day: d.short + ' 🌙' });
+    });
+  } else {
+    calData.days.forEach((d, i) => {
+      if (d.topic && d.status !== 'done') slots.push({ idx: i, ampm: null, topic: d.topic, day: d.short });
+    });
+  }
+  for (let j = 0; j < slots.length; j++) {
+    const s = slots[j];
+    document.getElementById('calStatus').textContent = `Generating ${j+1}/${slots.length}: ${s.day} — ${s.topic}`;
+    bar.style.width = ((j / slots.length) * 100) + '%';
+    await calGenerateDaySlot(s.idx, s.ampm, calData.days[s.idx].seriesMain);
   }
 
   bar.style.width = '100%';
@@ -3301,19 +3392,29 @@ document.addEventListener('DOMContentLoaded', () => {
   if (planBtn) planBtn.onclick = calPlanWeek;
   if (genAllBtn) genAllBtn.onclick = calGenerateAll;
 
-  // Series mode toggle
-  const seriesModeEl = document.getElementById('calSeriesMode');
-  const seriesBlock = document.getElementById('calSeriesBlock');
-  const statusEl = document.getElementById('calStatus');
-  if (seriesModeEl) {
-    seriesModeEl.addEventListener('change', () => {
-      const on = seriesModeEl.checked;
-      if (seriesBlock) seriesBlock.style.display = on ? 'block' : 'none';
-      if (statusEl) statusEl.textContent = on
-        ? 'Series mode: enter your topic above, then click "✨ Plan Week" for 7 connected episodes.'
-        : 'Variety mode: click "✨ Plan Week" to generate 7 different dark psychology topics.';
+  // Mode buttons
+  const modeMessages = {
+    variety: 'Variety mode: click "✨ Plan Week" to generate 7 different dark psychology topics.',
+    series: 'Series mode: enter your topic above, then click "✨ Plan Week" for 7 connected episodes.',
+    debate: 'Debate mode: enter topic + two sides, click "✨ Plan Week" for 14 posts (AM + PM daily).'
+  };
+  function setCalMode(mode) {
+    calMode = mode;
+    document.getElementById('calSeriesBlock').style.display = mode === 'series' ? 'block' : 'none';
+    document.getElementById('calDebateBlock').style.display = mode === 'debate' ? 'block' : 'none';
+    document.getElementById('calStatus').textContent = modeMessages[mode];
+    ['variety','series','debate'].forEach(m => {
+      const btn = document.getElementById('calMode' + m.charAt(0).toUpperCase() + m.slice(1));
+      if (btn) btn.className = 'cal-btn' + (m === mode ? ' primary' : '');
     });
+    renderCalendar();
   }
+  document.getElementById('calModeVariety')?.addEventListener('click', () => setCalMode('variety'));
+  document.getElementById('calModeSeries')?.addEventListener('click', () => setCalMode('series'));
+  document.getElementById('calModeDebate')?.addEventListener('click', () => setCalMode('debate'));
+
+  // Default: variety
+  setCalMode('variety');
 });
 
 
