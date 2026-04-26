@@ -271,6 +271,47 @@
   .toggle-track::after { content:''; position:absolute; top:2px; left:2px; width:14px; height:14px; background:#fff; border-radius:50%; transition:transform 0.2s; }
   .toggle-switch input:checked + .toggle-track::after { transform:translateX(18px); }
 
+
+  /* ── 7-Day Calendar ── */
+  .calendar-panel { margin-top: 24px; }
+  .cal-day-row {
+    display: grid; grid-template-columns: 52px 1fr auto auto;
+    gap: 8px; align-items: center; padding: 10px 0;
+    border-bottom: 1px solid #181818;
+  }
+  .cal-day-row:last-child { border-bottom: none; }
+  .cal-day-label { font-size: 11px; font-weight: 800; color: #666; letter-spacing: 1px; text-transform: uppercase; }
+  .cal-day-label.today { color: #8b0000; }
+  .cal-topic-input {
+    background: #080808; border: 1px solid #1e1e1e; color: #e5e5e5;
+    padding: 8px 10px; border-radius: 6px; font-size: 12px; font-family: inherit; width: 100%;
+  }
+  .cal-topic-input:focus { outline: none; border-color: #8b0000; }
+  .cal-status {
+    font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 10px; white-space: nowrap; flex-shrink: 0;
+  }
+  .cal-status.empty   { background: #1a1a1a; color: #444; }
+  .cal-status.planned { background: #1a1525; color: #9060cc; }
+  .cal-status.done    { background: #0f1f15; color: #40cc70; }
+  .cal-status.posted  { background: #1a0505; color: #cc4040; }
+  .cal-actions { display: flex; gap: 5px; flex-shrink: 0; }
+  .cal-btn {
+    background: transparent; border: 1px solid #2a2a2a; color: #888;
+    padding: 5px 8px; border-radius: 5px; font-size: 9px; cursor: pointer;
+    letter-spacing: 0.5px; font-family: inherit; white-space: nowrap;
+    transition: all 0.12s; width: auto;
+  }
+  .cal-btn:hover:not(:disabled) { border-color: #8b0000; color: #fff; }
+  .cal-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .cal-btn.primary { background: #8b0000; border-color: #8b0000; color: #fff; }
+  .cal-progress { height: 3px; background: #111; border-radius: 2px; margin-top: 12px; overflow: hidden; }
+  .cal-progress-bar { height: 100%; background: linear-gradient(90deg, #8b0000, #ff3b3b); width: 0; transition: width 0.4s; }
+  @media (max-width: 600px) {
+    .cal-day-row { grid-template-columns: 40px 1fr; }
+    .cal-actions { flex-wrap: wrap; }
+  }
+
   .hidden { display: none !important; }
   .progress-track {
     height: 4px; background: #1a1a1a; border-radius: 2px; overflow: hidden;
@@ -690,6 +731,24 @@
       </div>
     </div>
   </div>
+
+
+  <!-- ══ 7-DAY CONTENT CALENDAR ══ -->
+  <div class="panel calendar-panel">
+    <h2>
+      <span><span class="num" style="background:#4a0070">📅</span>7-Day Content Calendar</span>
+      <div style="display:flex;gap:6px">
+        <button class="small secondary" id="calPlanBtn">✨ Plan Week</button>
+        <button class="small secondary" id="calGenerateAllBtn">⚡ Generate All</button>
+      </div>
+    </h2>
+    <div id="calDayRows"></div>
+    <div class="cal-progress" id="calProgress" style="display:none">
+      <div class="cal-progress-bar" id="calProgressBar"></div>
+    </div>
+    <div class="cost-note" id="calStatus" style="margin-top:10px">Plan your week: click "✨ Plan Week" to auto-generate 7 topics, or type them manually.</div>
+  </div>
+
 
   <div class="footer-note">Local · No backend · Your keys stay in your browser</div>
 </div>
@@ -2955,6 +3014,240 @@ if (subsBgEnabledEl) {
 ['subsStyle','subsWords','subsFont','subsAllCaps','subsEnabled'].forEach(id => {
   const el = document.getElementById(id);
   if (el) el.addEventListener('change', drawStaticPreview);
+});
+
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  7-DAY CONTENT CALENDAR
+// ═══════════════════════════════════════════════════════════════════════════════
+const CAL_DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const CAL_SHORT = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+function getCalendar() {
+  try { return JSON.parse(localStorage.getItem('darkpsycho_calendar') || 'null'); } catch { return null; }
+}
+
+function saveCalendar(cal) {
+  localStorage.setItem('darkpsycho_calendar', JSON.stringify(cal));
+}
+
+function initCalendar() {
+  const saved = getCalendar();
+  if (saved && Array.isArray(saved.days) && saved.days.length === 7) return saved;
+  return {
+    days: CAL_DAYS.map((d, i) => ({ day: d, short: CAL_SHORT[i], topic: '', status: 'empty', posted: false, projectId: null }))
+  };
+}
+
+let calData = initCalendar();
+
+function todayDayIndex() {
+  const d = new Date().getDay(); // 0=Sun
+  return d === 0 ? 6 : d - 1;   // convert to Mon=0
+}
+
+function renderCalendar() {
+  const container = document.getElementById('calDayRows');
+  if (!container) return;
+  const todayIdx = todayDayIndex();
+  container.innerHTML = '';
+  calData.days.forEach((day, i) => {
+    const isToday = i === todayIdx;
+    const row = document.createElement('div');
+    row.className = 'cal-day-row';
+    row.dataset.idx = i;
+
+    // Day label
+    const label = document.createElement('div');
+    label.className = 'cal-day-label' + (isToday ? ' today' : '');
+    label.textContent = day.short + (isToday ? ' ★' : '');
+    row.appendChild(label);
+
+    // Topic input
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.className = 'cal-topic-input';
+    inp.placeholder = 'Topic for ' + day.day + '…';
+    inp.value = day.topic || '';
+    inp.addEventListener('input', () => {
+      calData.days[i].topic = inp.value.trim();
+      calData.days[i].status = inp.value.trim() ? 'planned' : 'empty';
+      saveCalendar(calData);
+      updateStatusPill(row, calData.days[i]);
+    });
+    row.appendChild(inp);
+
+    // Status pill
+    const pill = document.createElement('span');
+    pill.className = 'cal-status ' + day.status;
+    pill.textContent = day.posted ? 'POSTED' : day.status === 'done' ? 'DONE' : day.status === 'planned' ? 'PLANNED' : 'EMPTY';
+    if (day.posted) pill.className = 'cal-status posted';
+    row.appendChild(pill);
+
+    // Actions
+    const actions = document.createElement('div');
+    actions.className = 'cal-actions';
+
+    // Load into generator button
+    const loadBtn = document.createElement('button');
+    loadBtn.className = 'cal-btn';
+    loadBtn.textContent = '↗ Load';
+    loadBtn.title = 'Load this topic into the generator';
+    loadBtn.disabled = !day.topic;
+    loadBtn.onclick = () => {
+      const topicEl = document.getElementById('topic');
+      if (topicEl && day.topic) {
+        topicEl.value = day.topic;
+        document.querySelector('.panel').scrollIntoView({ behavior: 'smooth' });
+        topicEl.focus();
+        // Flash feedback
+        loadBtn.textContent = '✓ Loaded';
+        setTimeout(() => loadBtn.textContent = '↗ Load', 1200);
+      }
+    };
+    actions.appendChild(loadBtn);
+
+    // Generate button
+    const genBtn = document.createElement('button');
+    genBtn.className = 'cal-btn primary';
+    genBtn.textContent = '⚡';
+    genBtn.title = 'Generate video for this day';
+    genBtn.disabled = !day.topic;
+    genBtn.onclick = () => calGenerateDay(i);
+    actions.appendChild(genBtn);
+
+    // Posted toggle
+    const postedBtn = document.createElement('button');
+    postedBtn.className = 'cal-btn' + (day.posted ? ' primary' : '');
+    postedBtn.textContent = day.posted ? '✓' : '○';
+    postedBtn.title = day.posted ? 'Mark as not posted' : 'Mark as posted';
+    postedBtn.onclick = () => {
+      calData.days[i].posted = !calData.days[i].posted;
+      saveCalendar(calData);
+      renderCalendar();
+    };
+    actions.appendChild(postedBtn);
+
+    row.appendChild(actions);
+    container.appendChild(row);
+  });
+  updateCalStatus();
+}
+
+function updateStatusPill(row, day) {
+  const pill = row.querySelector('.cal-status');
+  if (!pill) return;
+  if (day.posted) { pill.className = 'cal-status posted'; pill.textContent = 'POSTED'; }
+  else if (day.status === 'done') { pill.className = 'cal-status done'; pill.textContent = 'DONE'; }
+  else if (day.status === 'planned') { pill.className = 'cal-status planned'; pill.textContent = 'PLANNED'; }
+  else { pill.className = 'cal-status empty'; pill.textContent = 'EMPTY'; }
+}
+
+function updateCalStatus() {
+  const el = document.getElementById('calStatus');
+  if (!el) return;
+  const total = calData.days.length;
+  const planned = calData.days.filter(d => d.topic).length;
+  const done = calData.days.filter(d => d.status === 'done').length;
+  const posted = calData.days.filter(d => d.posted).length;
+  el.textContent = `Week: ${planned}/7 planned · ${done}/7 generated · ${posted}/7 posted`;
+}
+
+// ── Plan Week: Claude generates 7 unique topics ────────────────────────────────
+async function calPlanWeek() {
+  const key = document.getElementById('anthropicKey')?.value.trim();
+  if (!key) { alert('Add your Anthropic API key first (Section 1)'); return; }
+  const planBtn = document.getElementById('calPlanBtn');
+  planBtn.disabled = true; planBtn.textContent = '…Planning';
+
+  try {
+    const today = CAL_DAYS[todayDayIndex()];
+    const prompt = `You are a viral dark-psychology content strategist. Generate a 7-day content calendar of unique, varied dark-psychology video topics for a creator on TikTok/Reels.
+
+Each topic should be different in angle — mix: relationship psychology, manipulation tactics, social dynamics, self-sabotage patterns, cultural psychology, power dynamics, emotional intelligence.
+
+Output STRICTLY valid JSON — an array of exactly 7 strings, one topic per day starting from ${today}:
+["Topic for day 1", "Topic for day 2", ..., "Topic for day 7"]
+
+- Each topic MAX 12 words
+- Make them viral-hook style (curiosity-inducing, slightly uncomfortable truths)
+- No repetition — all 7 must be distinctly different angles
+- NO MARKDOWN. Raw JSON array only.`;
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 600, messages: [{ role: 'user', content: prompt }] })
+    });
+    const data = await res.json();
+    let text = data.content[0].text.trim().replace(/^```json?\s*/i,'').replace(/```$/,'').trim();
+    const topics = JSON.parse(text);
+    if (!Array.isArray(topics) || topics.length !== 7) throw new Error('Bad response');
+
+    // Rotate topics to start from today
+    const todayIdx = todayDayIndex();
+    calData.days.forEach((day, i) => {
+      const topicIdx = (i - todayIdx + 7) % 7;
+      // Only fill empty days
+      if (!day.topic) {
+        day.topic = topics[topicIdx];
+        day.status = 'planned';
+      }
+    });
+    saveCalendar(calData);
+    renderCalendar();
+    document.getElementById('calStatus').textContent = '✓ Week planned! Edit topics or click ⚡ to generate.';
+  } catch (err) {
+    alert('Error planning week: ' + err.message);
+  } finally {
+    planBtn.disabled = false; planBtn.textContent = '✨ Plan Week';
+  }
+}
+
+// ── Generate single day ────────────────────────────────────────────────────────
+async function calGenerateDay(idx) {
+  const day = calData.days[idx];
+  if (!day.topic) return;
+  // Load topic into main generator and trigger generate
+  const topicEl = document.getElementById('topic');
+  if (topicEl) topicEl.value = day.topic;
+  await runGenerateAll();
+  // Mark as done after generation
+  calData.days[idx].status = 'done';
+  saveCalendar(calData);
+  renderCalendar();
+}
+
+// ── Generate All 7 days sequentially ──────────────────────────────────────────
+async function calGenerateAll() {
+  const btn = document.getElementById('calGenerateAllBtn');
+  const prog = document.getElementById('calProgress');
+  const bar = document.getElementById('calProgressBar');
+  btn.disabled = true;
+  prog.style.display = 'block';
+
+  const days = calData.days.filter(d => d.topic && d.status !== 'done');
+  for (let j = 0; j < days.length; j++) {
+    const idx = calData.days.indexOf(days[j]);
+    document.getElementById('calStatus').textContent = `Generating day ${j+1}/${days.length}: ${days[j].day} — ${days[j].topic}`;
+    bar.style.width = ((j / days.length) * 100) + '%';
+    await calGenerateDay(idx);
+  }
+
+  bar.style.width = '100%';
+  setTimeout(() => { prog.style.display = 'none'; bar.style.width = '0'; }, 1200);
+  btn.disabled = false;
+  document.getElementById('calStatus').textContent = '✅ All days generated! Mark them as Posted when you upload.';
+}
+
+// Wire up buttons
+document.addEventListener('DOMContentLoaded', () => {
+  renderCalendar();
+  const planBtn = document.getElementById('calPlanBtn');
+  const genAllBtn = document.getElementById('calGenerateAllBtn');
+  if (planBtn) planBtn.onclick = calPlanWeek;
+  if (genAllBtn) genAllBtn.onclick = calGenerateAll;
 });
 
 
