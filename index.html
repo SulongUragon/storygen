@@ -742,11 +742,30 @@
         <button class="small secondary" id="calGenerateAllBtn">⚡ Generate All</button>
       </div>
     </h2>
+
+    <!-- Mode toggle -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;background:#0d0d0d;border:1px solid #1e1e1e;border-radius:8px;padding:10px 12px;">
+      <div style="flex:1">
+        <div style="font-size:11px;font-weight:700;color:#ccc;">📺 Weekly Series Mode</div>
+        <div style="font-size:10px;color:#555;margin-top:2px;">One topic, 7 connected episodes with story flow</div>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="calSeriesMode" checked>
+        <div class="toggle-track"></div>
+      </label>
+    </div>
+
+    <!-- Series topic input (shown in series mode) -->
+    <div id="calSeriesBlock" style="margin-bottom:14px;">
+      <label style="display:block;font-size:10px;color:#666;text-transform:uppercase;letter-spacing:2px;font-weight:600;margin-bottom:6px;">Series Topic</label>
+      <input type="text" id="calSeriesTopic" class="cal-topic-input" style="font-size:13px;padding:12px;" placeholder="e.g. Dark Psychology ng Filipino Culture" value="">
+    </div>
+
     <div id="calDayRows"></div>
     <div class="cal-progress" id="calProgress" style="display:none">
       <div class="cal-progress-bar" id="calProgressBar"></div>
     </div>
-    <div class="cost-note" id="calStatus" style="margin-top:10px">Plan your week: click "✨ Plan Week" to auto-generate 7 topics, or type them manually.</div>
+    <div class="cost-note" id="calStatus" style="margin-top:10px">Series mode: enter your topic above, then click "✨ Plan Week" — Claude will write 7 connected episodes.</div>
   </div>
 
 
@@ -3154,50 +3173,78 @@ function updateCalStatus() {
   el.textContent = `Week: ${planned}/7 planned · ${done}/7 generated · ${posted}/7 posted`;
 }
 
-// ── Plan Week: Claude generates 7 unique topics ────────────────────────────────
+// ── Plan Week: Claude generates topics (series OR variety) ────────────────────
 async function calPlanWeek() {
   const key = document.getElementById('anthropicKey')?.value.trim();
   if (!key) { alert('Add your Anthropic API key first (Section 1)'); return; }
+  const isSeriesMode = document.getElementById('calSeriesMode')?.checked;
+  const seriesTopic = document.getElementById('calSeriesTopic')?.value.trim();
+  if (isSeriesMode && !seriesTopic) { alert('Enter your series topic first.'); return; }
+
   const planBtn = document.getElementById('calPlanBtn');
   planBtn.disabled = true; planBtn.textContent = '…Planning';
 
   try {
-    const today = CAL_DAYS[todayDayIndex()];
-    const prompt = `You are a viral dark-psychology content strategist. Generate a 7-day content calendar of unique, varied dark-psychology video topics for a creator on TikTok/Reels.
+    let prompt;
+    if (isSeriesMode) {
+      prompt = `You are a viral dark-psychology content strategist. A creator wants to make a 7-part video SERIES on the following topic:
+
+"${seriesTopic}"
+
+Create 7 connected episode sub-topics that tell a complete story arc across the week. Each episode must:
+- Build naturally on the previous one
+- Reveal a new layer, angle, or deeper truth
+- Work as a standalone video but reward viewers who watch all 7
+- Be a viral-hook style title (curiosity-inducing, uncomfortable truth)
+- MAX 12 words each
+
+Output STRICTLY valid JSON — an array of exactly 7 strings:
+["Episode 1 sub-topic", "Episode 2 sub-topic", ..., "Episode 7 sub-topic"]
+
+Story arc example pattern: Setup → Deepen → Reveal → Twist → Consequence → Solution → Call to action
+NO MARKDOWN. Raw JSON array only.`;
+    } else {
+      const today = CAL_DAYS[todayDayIndex()];
+      prompt = `You are a viral dark-psychology content strategist. Generate a 7-day content calendar of unique, varied dark-psychology video topics for a creator on TikTok/Reels.
 
 Each topic should be different in angle — mix: relationship psychology, manipulation tactics, social dynamics, self-sabotage patterns, cultural psychology, power dynamics, emotional intelligence.
 
 Output STRICTLY valid JSON — an array of exactly 7 strings, one topic per day starting from ${today}:
 ["Topic for day 1", "Topic for day 2", ..., "Topic for day 7"]
 
-- Each topic MAX 12 words
-- Make them viral-hook style (curiosity-inducing, slightly uncomfortable truths)
+- Each topic MAX 12 words, viral-hook style
 - No repetition — all 7 must be distinctly different angles
 - NO MARKDOWN. Raw JSON array only.`;
+    }
 
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 600, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 800, messages: [{ role: 'user', content: prompt }] })
     });
     const data = await res.json();
     let text = data.content[0].text.trim().replace(/^```json?\s*/i,'').replace(/```$/,'').trim();
     const topics = JSON.parse(text);
     if (!Array.isArray(topics) || topics.length !== 7) throw new Error('Bad response');
 
-    // Rotate topics to start from today
     const todayIdx = todayDayIndex();
     calData.days.forEach((day, i) => {
-      const topicIdx = (i - todayIdx + 7) % 7;
-      // Only fill empty days
-      if (!day.topic) {
+      const topicIdx = isSeriesMode ? i : (i - todayIdx + 7) % 7;
+      // For series: prefix with "Ep.N — " for clarity; always overwrite in series mode
+      if (isSeriesMode) {
+        day.topic = `Ep.${i+1} — ${topics[topicIdx]}`;
+        if (isSeriesMode) day.seriesMain = seriesTopic;
+      } else if (!day.topic) {
         day.topic = topics[topicIdx];
-        day.status = 'planned';
       }
+      day.status = 'planned';
     });
     saveCalendar(calData);
     renderCalendar();
-    document.getElementById('calStatus').textContent = '✓ Week planned! Edit topics or click ⚡ to generate.';
+    const msg = isSeriesMode
+      ? `✓ 7-episode series planned for "${seriesTopic}"! Edit episodes or click ⚡ to generate.`
+      : '✓ Week planned! Edit topics or click ⚡ to generate.';
+    document.getElementById('calStatus').textContent = msg;
   } catch (err) {
     alert('Error planning week: ' + err.message);
   } finally {
@@ -3209,11 +3256,16 @@ Output STRICTLY valid JSON — an array of exactly 7 strings, one topic per day 
 async function calGenerateDay(idx) {
   const day = calData.days[idx];
   if (!day.topic) return;
-  // Load topic into main generator and trigger generate
   const topicEl = document.getElementById('topic');
-  if (topicEl) topicEl.value = day.topic;
+  if (topicEl) {
+    // In series mode, give Claude the full context: series topic + episode
+    if (day.seriesMain) {
+      topicEl.value = `${day.topic} (Part of series: "${day.seriesMain}")`;
+    } else {
+      topicEl.value = day.topic;
+    }
+  }
   await runGenerateAll();
-  // Mark as done after generation
   calData.days[idx].status = 'done';
   saveCalendar(calData);
   renderCalendar();
@@ -3248,6 +3300,20 @@ document.addEventListener('DOMContentLoaded', () => {
   const genAllBtn = document.getElementById('calGenerateAllBtn');
   if (planBtn) planBtn.onclick = calPlanWeek;
   if (genAllBtn) genAllBtn.onclick = calGenerateAll;
+
+  // Series mode toggle
+  const seriesModeEl = document.getElementById('calSeriesMode');
+  const seriesBlock = document.getElementById('calSeriesBlock');
+  const statusEl = document.getElementById('calStatus');
+  if (seriesModeEl) {
+    seriesModeEl.addEventListener('change', () => {
+      const on = seriesModeEl.checked;
+      if (seriesBlock) seriesBlock.style.display = on ? 'block' : 'none';
+      if (statusEl) statusEl.textContent = on
+        ? 'Series mode: enter your topic above, then click "✨ Plan Week" for 7 connected episodes.'
+        : 'Variety mode: click "✨ Plan Week" to generate 7 different dark psychology topics.';
+    });
+  }
 });
 
 
