@@ -2383,6 +2383,7 @@ async function runPlayback(record) {
     currentExt = ext;
     $('downloadBtn').disabled = false;
   const schedBtn = document.getElementById('scheduleBtn'); if (schedBtn) schedBtn.disabled = false;
+  uploadAfterRecord(); // Auto-upload to Cloudinary after recording
     setStatus(`Done · ${(currentBlob.size / 1024 / 1024).toFixed(1)} MB · ${ext.toUpperCase()}`, 'success');
   } else {
     setStatus('');
@@ -3901,6 +3902,35 @@ document.getElementById('importKeysConfirmBtn')?.addEventListener('click', () =>
   } catch (e) {
     setStatus('❌ Invalid keys code', 'error');
   }
+});
+
+
+
+// ── Cloudinary URL tracking ───────────────────────────────────────────────────
+let lastCloudinaryUrl = null;
+
+async function uploadAfterRecord() {
+  const preset = document.getElementById('cloudinaryPreset')?.value.trim()
+    || localStorage.getItem('cloudinary_preset');
+  if (!preset || !currentBlob) return;
+  try {
+    lastCloudinaryUrl = await uploadToCloudinary(currentBlob, preset);
+    const display = document.getElementById('cloudUrlDisplay');
+    if (display) { display.style.display = 'block'; display.textContent = lastCloudinaryUrl; }
+    const copyBtn = document.getElementById('copyUrlBtn');
+    if (copyBtn) copyBtn.disabled = false;
+  } catch (e) {
+    console.warn('Auto Cloudinary upload failed:', e.message);
+  }
+}
+
+document.getElementById('copyUrlBtn')?.addEventListener('click', () => {
+  if (!lastCloudinaryUrl) return;
+  navigator.clipboard.writeText(lastCloudinaryUrl).then(() => {
+    const btn = document.getElementById('copyUrlBtn');
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => btn.textContent = '🔗 Copy Cloudinary URL', 2000);
+  });
 });
 
 
