@@ -443,8 +443,9 @@
         <div id="quoteBgRow" style="display:none;margin-bottom:14px;">
           <label style="display:block;font-size:10px;color:#666;text-transform:uppercase;letter-spacing:2px;font-weight:600;margin-bottom:6px;">Animated Background</label>
           <select id="quoteBg" style="width:100%;background:#080808;border:1px solid #252525;color:#e5e5e5;padding:10px;border-radius:6px;font-family:inherit;font-size:13px;">
+            <option value="ai" selected>🎨 AI Generated (vibrant)</option>
             <option value="rain">🌧 Rain</option>
-            <option value="particles" selected>✨ Particles</option>
+            <option value="particles">✨ Particles</option>
             <option value="smoke">🌫 Smoke</option>
             <option value="matrix">💊 Matrix</option>
             <option value="bokeh">🔮 Bokeh</option>
@@ -1961,10 +1962,30 @@ async function runGenerateAll() {
     rebuildThumbGrid();
     setProgress(10);
 
-    // Step 2: Images — skip in quotes mode
+    // Step 2: Images — generate for AI bg quotes mode, skip for animated
     if (contentMode === 'quotes') {
-      images = new Array(script.scenes.length).fill(null);
-      assetsStatusEl.textContent = '✓ Quotes mode — no images needed';
+      const quoteBgMode = document.getElementById('quoteBg')?.value || 'ai';
+      if (quoteBgMode === 'ai') {
+        // Generate one vibrant cinematic image per scene
+        const QUOTES_STYLE = "Vibrant cinematic photography, dramatic atmospheric scene, rich saturated colors, moody lighting, 9:16 vertical frame, editorial quality. NO people. NO text. Background scene: ";
+        for (let i = 0; i < script.scenes.length; i++) {
+          setStatus(`Generating background ${i + 1}/${script.scenes.length}…`, 'info');
+          setProgress(15 + ((i / script.scenes.length) * 40));
+          const prompt = (script.scenes[i].imagePrompt || 'dramatic dark atmospheric cinematic scene');
+          try {
+            const body = { prompt: QUOTES_STYLE + prompt, image_size: { width: 768, height: 1344 }, num_images: 1, num_inference_steps: 4, enable_safety_checker: false, sync_mode: true };
+            const res = await fetch('https://fal.run/fal-ai/flux/schnell', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Key ${falKey}` }, body: JSON.stringify(body) });
+            const data = await res.json();
+            const url = data.images?.[0]?.url;
+            if (url) { const blob = await (await fetch(url)).blob(); images[i] = await loadImage(URL.createObjectURL(blob)); }
+          } catch(e) { console.warn('Quote bg gen failed:', e); }
+          rebuildThumbGrid();
+        }
+        assetsStatusEl.textContent = `✓ ${script.scenes.length} AI backgrounds ready`;
+      } else {
+        images = new Array(script.scenes.length).fill(null);
+        assetsStatusEl.textContent = '✓ Quotes mode — animated background';
+      }
       setProgress(60);
     } else
     for (let i = 0; i < script.scenes.length; i++) {
@@ -4161,7 +4182,8 @@ Output STRICTLY valid JSON:
     {
       "quote": "The full quote text — 1-2 sentences, no quotation marks",
       "narration": "Same as quote — this is what the voice will say",
-      "attribution": "Dark Psychology"
+      "attribution": "Dark Psychology",
+      "imagePrompt": "cinematic atmospheric background scene that emotionally matches this quote — describe a vivid, colorful, dramatic environment (city at night, stormy ocean, dark forest with light, etc.). NO people, NO text. Under 20 words."
     }
   ],
   "caption": "viral TikTok caption, 1-2 sentences. NO hashtags.",
@@ -4173,6 +4195,7 @@ RULES:
 - EXACTLY ${sceneCount} scenes
 - No quotation marks inside the quote field
 - Each quote must be distinctly different angle on the topic
+- imagePrompt must be vivid and cinematic — match the emotional tone of the quote
 - NO MARKDOWN. Raw JSON only.`;
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -4194,9 +4217,25 @@ RULES:
 }
 
 function drawQuoteScene(sceneIdx, tInScene, sceneDuration) {
-  // Animated background
+  const quoteBgMode = document.getElementById('quoteBg')?.value || 'ai';
   const t = performance.now() / 1000;
-  drawAnimatedBg(t);
+  const img = images[sceneIdx];
+
+  if (quoteBgMode === 'ai' && img) {
+    // Cover-fit AI image as background with slight ken burns
+    ctx.save();
+    const progress = Math.min(1, tInScene / Math.max(0.5, sceneDuration));
+    const zoom = 1 + 0.05 * progress;
+    const iw = img.width / img.height > W / H ? H * (img.width / img.height) * zoom : W * zoom;
+    const ih = img.width / img.height > W / H ? H * zoom : W / (img.width / img.height) * zoom;
+    ctx.drawImage(img, (W - iw)/2, (H - ih)/2, iw, ih);
+    ctx.restore();
+    // Heavy dark overlay so quote is readable
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(0, 0, W, H);
+  } else {
+    drawAnimatedBg(t);
+  }
   if (!script || !script.scenes[sceneIdx]) return;
   const scene = script.scenes[sceneIdx];
   const fade = Math.min(1, tInScene / 0.4);
@@ -4209,9 +4248,8 @@ function drawQuoteScene(sceneIdx, tInScene, sceneDuration) {
   ctx.save();
   ctx.globalAlpha = fade;
 
-  // Dark overlay for readability
-  ctx.fillStyle = 'rgba(0,0,0,0.55)';
-  ctx.fillRect(0, 0, W, H);
+  // Dark overlay for readability (animated bg only — AI bg already has overlay above)
+  if (quoteBgMode !== 'ai' || !img) { ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(0, 0, W, H); }
 
   // Decorative top line
   ctx.strokeStyle = 'rgba(255,255,255,0.3)';
