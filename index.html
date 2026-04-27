@@ -436,6 +436,10 @@
 
       <div class="panel">
         <h2><span><span class="num">2</span>Topic &amp; Config</span></h2>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+          <button class="cal-btn primary" id="modeListicle" onclick="setContentMode('listicle')">📋 Listicle<br><span style="font-size:8px;opacity:0.7">Stories + images</span></button>
+          <button class="cal-btn" id="modeQuotes" onclick="setContentMode('quotes')">💬 Quotes<br><span style="font-size:8px;opacity:0.7">Text-only, no images</span></button>
+        </div>
         <div class="field">
           <label>Topic / Theme</label>
           <input type="text" id="topic" placeholder="e.g. 5 stages of every relationship" value="The Dark Psychology Behind Why Filipinos Can't Say No">
@@ -1762,6 +1766,7 @@ function drawHighlightSubtitle(words, spokenCount, alpha) {
 }
 
 function drawScene(sceneIdx, tInScene, sceneDuration) {
+  if (contentMode === 'quotes') { drawQuoteScene(sceneIdx, tInScene, sceneDuration); return; }
   drawConcrete();
   if (!script || !script.scenes[sceneIdx]) return;
   const scene = script.scenes[sceneIdx];
@@ -1834,6 +1839,7 @@ function drawScene(sceneIdx, tInScene, sceneDuration) {
 }
 
 function drawStaticPreview() {
+  if (contentMode === 'quotes' && script) { drawQuoteScene(previewScene, 0.5, 4); return; }
   if (!script) {
     drawConcrete();
     ctx.save();
@@ -1926,7 +1932,9 @@ async function runGenerateAll() {
     // Step 1: Script
     setStatus('Claude writing script…', 'info');
     setProgress(5);
-    script = await generateScript(topic, sceneCount, anthropicKey);
+    script = contentMode === 'quotes'
+      ? await generateQuotesScript(topic, sceneCount, anthropicKey)
+      : await generateScript(topic, sceneCount, anthropicKey);
     images = new Array(script.scenes.length).fill(null);
     imageBlobs = new Array(script.scenes.length).fill(null);
     processedImages = []; processedThreshold = -1;
@@ -1943,7 +1951,12 @@ async function runGenerateAll() {
     rebuildThumbGrid();
     setProgress(10);
 
-    // Step 2: Images (sequential to respect rate limits)
+    // Step 2: Images — skip in quotes mode
+    if (contentMode === 'quotes') {
+      images = new Array(script.scenes.length).fill(null);
+      assetsStatusEl.textContent = '✓ Quotes mode — no images needed';
+      setProgress(60);
+    } else
     for (let i = 0; i < script.scenes.length; i++) {
       setStatus(`Generating illustration ${i + 1}/${script.scenes.length}…`, 'info');
       const isCartoon = document.getElementById('cartoonMode')?.checked || false;
@@ -3981,6 +3994,172 @@ if (zoomIntensityEl) {
     drawStaticPreview();
   });
 }
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  QUOTES MODE
+// ═══════════════════════════════════════════════════════════════════════════════
+let contentMode = 'listicle'; // 'listicle' | 'quotes'
+
+function setContentMode(mode) {
+  contentMode = mode;
+  const lb = document.getElementById('modeListicle');
+  const qb = document.getElementById('modeQuotes');
+  if (lb) lb.className = 'cal-btn' + (mode === 'listicle' ? ' primary' : '');
+  if (qb) qb.className = 'cal-btn' + (mode === 'quotes' ? ' primary' : '');
+  drawStaticPreview();
+}
+
+async function generateQuotesScript(topic, sceneCount, apiKey) {
+  const prompt = `You are a viral dark-psychology quote creator for TikTok/Reels/Shorts.
+
+Topic: "${topic}"
+
+Generate ${sceneCount} powerful, punchy dark-psychology quotes on this topic. Each quote should be:
+- Original (not a famous existing quote)
+- 1-2 sentences max, hard-hitting truth
+- The kind that makes people stop scrolling
+- Raw, uncomfortable, honest
+- Reads naturally when spoken aloud
+
+Output STRICTLY valid JSON:
+{
+  "mainTitle": "short viral hook title, MAX 6 WORDS",
+  "scenes": [
+    {
+      "quote": "The full quote text — 1-2 sentences, no quotation marks",
+      "narration": "Same as quote — this is what the voice will say",
+      "attribution": "Dark Psychology"
+    }
+  ],
+  "caption": "viral TikTok caption, 1-2 sentences. NO hashtags.",
+  "keywords": ["10 keywords lowercase"],
+  "hashtags": ["5 hashtags without # prefix"]
+}
+
+RULES:
+- EXACTLY ${sceneCount} scenes
+- No quotation marks inside the quote field
+- Each quote must be distinctly different angle on the topic
+- NO MARKDOWN. Raw JSON only.`;
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 2000, messages: [{ role: 'user', content: prompt }] })
+  });
+  if (!response.ok) throw new Error('Claude ' + response.status);
+  const data = await response.json();
+  let text = data.content[0].text.trim().replace(/^```json\s*/i,'').replace(/```$/,'').trim();
+  const parsed = JSON.parse(text);
+  // Normalize: use quote as title for each scene
+  parsed.scenes = parsed.scenes.map(s => ({
+    ...s,
+    title: s.attribution || 'Dark Psychology',
+    imagePrompt: '' // no images in quotes mode
+  }));
+  return parsed;
+}
+
+function drawQuoteScene(sceneIdx, tInScene, sceneDuration) {
+  // Background (use current bg variant)
+  drawConcrete();
+  if (!script || !script.scenes[sceneIdx]) return;
+  const scene = script.scenes[sceneIdx];
+  const fade = Math.min(1, tInScene / 0.4);
+
+  // Subtle zoom on background
+  ctx.save();
+  const zoomAmt = 1 + 0.03 * Math.min(1, tInScene / Math.max(1, sceneDuration));
+  ctx.translate(W/2, H/2);
+  ctx.scale(zoomAmt, zoomAmt);
+  ctx.translate(-W/2, -H/2);
+  ctx.restore();
+
+  // Quote text — big, centered, dramatic
+  const quote = scene.quote || scene.narration || '';
+  const attribution = scene.attribution || 'Dark Psychology';
+  const quoteFont = document.getElementById('titleFont')?.value || "'Montserrat', sans-serif";
+
+  ctx.save();
+  ctx.globalAlpha = fade;
+
+  // Dark overlay for readability
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Decorative top line
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(80, H*0.28); ctx.lineTo(W-80, H*0.28); ctx.stroke();
+
+  // Opening quote mark
+  ctx.font = `900 120px ${quoteFont}`;
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText('“', 60, H*0.28);
+
+  // Main quote text
+  let fontSize = 72;
+  const maxW = W - 120;
+  ctx.font = `800 ${fontSize}px ${quoteFont}`;
+  let lines = wrapText(quote.toUpperCase(), maxW);
+  while (lines.length > 5 && fontSize > 40) {
+    fontSize -= 4;
+    ctx.font = `800 ${fontSize}px ${quoteFont}`;
+    lines = wrapText(quote.toUpperCase(), maxW);
+  }
+  const lineH = fontSize * 1.2;
+  const blockH = lineH * lines.length;
+  const startY = H/2 - blockH/2;
+
+  // Shadow/stroke for depth
+  ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+  ctx.lineWidth = Math.max(6, fontSize * 0.1);
+  ctx.lineJoin = 'round';
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  lines.forEach((line, i) => {
+    ctx.strokeText(line, W/2, startY + i * lineH);
+    ctx.fillText(line, W/2, startY + i * lineH);
+  });
+
+  // Attribution
+  ctx.font = `600 28px 'Inter', sans-serif`;
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.letterSpacing = '3px';
+  ctx.fillText('— ' + attribution.toUpperCase(), W/2, startY + blockH + 30);
+
+  // Decorative bottom line
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(80, H*0.72); ctx.lineTo(W-80, H*0.72); ctx.stroke();
+
+  // Scene counter
+  ctx.font = `600 20px 'Inter', sans-serif`;
+  ctx.fillStyle = `rgba(255,255,255,0.35)`;
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText(`${sceneIdx + 1} / ${script.scenes.length}`, W - 40, H - 40);
+
+  ctx.restore();
+
+  // Word-by-word subtitle of the quote
+  if (document.getElementById('subsEnabled')?.checked) {
+    const narrationDuration = audios[sceneIdx]?.duration ?? Math.max(0.5, sceneDuration - 0.2);
+    const offset = parseFloat(document.getElementById('subsOffset')?.value || '0');
+    const adjT = tInScene + offset;
+    const wordsPerChunk = parseInt(document.getElementById('subsWords')?.value || '2');
+    const wt = wordTimings[sceneIdx];
+    const currentChunk = wt
+      ? getChunkFromWordTimings(wt, adjT, wordsPerChunk)
+      : getCurrentChunk(chunkWords(quote, wordsPerChunk), adjT, narrationDuration);
+    if (currentChunk !== null) drawSubtitle(currentChunk, fade);
+  }
+}
+
 
 // Init
 function init() {
