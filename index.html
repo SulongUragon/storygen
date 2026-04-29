@@ -327,6 +327,173 @@
     height: 100%; background: linear-gradient(90deg, #8b0000, #ff3b3b);
     width: 0%; transition: width 0.3s;
   }
+
+  /* ── Cost Estimator + Spending Tracker ── */
+  .cost-estimator {
+    margin-top: 12px;
+    padding: 12px 14px;
+    background: linear-gradient(135deg, #0d0d0d, #181818);
+    border: 1px solid #252525;
+    border-radius: 8px;
+  }
+  .cost-est-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+    font-weight: 700; font-size: 10px; letter-spacing: 2px;
+    text-transform: uppercase; color: #888;
+  }
+  .cost-total {
+    font-size: 20px; font-weight: 900;
+    letter-spacing: 0.5px; color: #4ade80;
+    transition: color 0.2s;
+  }
+  .cost-total.medium { color: #facc15; }
+  .cost-total.high { color: #ff3b3b; }
+  .cost-breakdown {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .cost-line {
+    display: flex; flex-direction: column;
+    padding: 7px 9px;
+    background: #080808;
+    border-radius: 5px;
+    border-left: 3px solid #333;
+  }
+  .cost-line .svc { color: #555; font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; }
+  .cost-line .val { color: #ccc; font-size: 13px; font-weight: 700; margin-top: 3px; }
+  .cost-line.claude { border-left-color: #d97706; }
+  .cost-line.fal { border-left-color: #06b6d4; }
+  .cost-line.eleven { border-left-color: #8b5cf6; }
+  .spending-stats {
+    margin-top: 10px; padding-top: 10px;
+    border-top: 1px dashed #2a2a2a;
+    display: flex; justify-content: space-around;
+  }
+  .spending-stats .stat { text-align: center; }
+  .spending-stats .stat .lbl { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: #444; }
+  .spending-stats .stat .val { font-size: 12px; color: #aaa; font-weight: 700; margin-top: 2px; }
+  #spendAllStat { cursor: help; transition: color 0.15s; }
+  #spendAllStat:hover .val { color: #ff3b3b; }
+
+  /* Pre-flight Modal */
+  .preflight-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 1000;
+    display: none; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .preflight-overlay.show { display: flex; }
+  .preflight-box {
+    background: #0e0e0e; border: 1px solid #2a2a2a;
+    border-radius: 12px; padding: 28px;
+    max-width: 460px; width: 100%;
+    box-shadow: 0 0 60px rgba(139,0,0,0.35);
+    animation: pfPop 0.18s ease-out;
+  }
+  @keyframes pfPop { from { opacity: 0; transform: translateY(8px) scale(0.97); } to { opacity: 1; transform: none; } }
+  .preflight-box h3 {
+    font-size: 14px; letter-spacing: 4px; text-transform: uppercase;
+    font-weight: 800; margin-bottom: 4px;
+    background: linear-gradient(135deg, #ff3b3b, #8b0000);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .preflight-box .sub { color: #666; font-size: 11px; margin-bottom: 18px; letter-spacing: 1px; }
+  .preflight-row {
+    display: flex; justify-content: space-between;
+    padding: 9px 0; border-bottom: 1px solid #1a1a1a;
+    font-size: 13px;
+  }
+  .preflight-row:last-of-type { border-bottom: none; }
+  .preflight-row .lbl { color: #888; }
+  .preflight-row .val { color: #e5e5e5; font-weight: 600; max-width: 60%; text-align: right; word-break: break-word; }
+  .preflight-total {
+    margin-top: 14px; padding: 14px 16px;
+    background: #080808; border-radius: 8px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .preflight-total .lbl { color: #aaa; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; font-size: 11px; }
+  .preflight-total .val { font-size: 22px; font-weight: 900; color: #ff3b3b; }
+  .pf-cb { margin-top: 14px; display: flex; align-items: center; gap: 8px; font-size: 11px; color: #777; cursor: pointer; user-select: none; }
+  .pf-cb input { cursor: pointer; }
+  .preflight-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+  .preflight-buttons button {
+    padding: 12px; border-radius: 7px; font-weight: 700; font-size: 12px;
+    letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer;
+    transition: 0.15s all; border: none; font-family: inherit;
+  }
+  .preflight-buttons .cancel { background: #1a1a1a; color: #aaa; border: 1px solid #2a2a2a; }
+  .preflight-buttons .cancel:hover { background: #222; color: #fff; }
+  .preflight-buttons .confirm { background: linear-gradient(135deg, #8b0000, #ff3b3b); color: #fff; }
+  .preflight-buttons .confirm:hover { transform: translateY(-1px); box-shadow: 0 0 20px rgba(255,59,59,0.45); }
+
+  @media (max-width: 600px) {
+    .cost-breakdown { grid-template-columns: 1fr; }
+    .preflight-box { padding: 20px; }
+  }
+
+  /* ── Episode Poster Generator ── */
+  .poster-panel-grid { display: grid; grid-template-columns: 240px 1fr; gap: 18px; align-items: start; }
+  @media (max-width: 720px) { .poster-panel-grid { grid-template-columns: 1fr; } }
+  .poster-canvas-wrap {
+    background: #000; border: 1px solid #1f1f1f; border-radius: 8px;
+    overflow: hidden; aspect-ratio: 9 / 16; position: relative;
+    box-shadow: 0 0 24px rgba(139,0,0,0.18);
+  }
+  .poster-canvas-wrap canvas {
+    width: 100%; height: 100%; display: block;
+  }
+  .poster-canvas-wrap.empty::after {
+    content: 'Generate script first'; position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: #444; font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  }
+  .poster-controls { display: flex; flex-direction: column; gap: 12px; }
+  .poster-style-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .poster-style-btn {
+    padding: 8px 4px; border-radius: 6px;
+    background: #0a0a0a; border: 1px solid #2a2a2a; color: #888;
+    font-family: inherit; font-size: 10px; font-weight: 700;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    cursor: pointer; transition: 0.15s all;
+  }
+  .poster-style-btn:hover { color: #fff; border-color: #404040; }
+  .poster-style-btn.active {
+    background: linear-gradient(135deg, #2a0000, #500000);
+    border-color: #8b0000; color: #ff8c8c;
+    box-shadow: 0 0 12px rgba(139,0,0,0.4);
+  }
+  .poster-position-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .poster-pos-btn {
+    padding: 7px; border-radius: 5px;
+    background: #0a0a0a; border: 1px solid #2a2a2a; color: #888;
+    font-family: inherit; font-size: 10px; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase;
+    cursor: pointer; transition: 0.15s all;
+  }
+  .poster-pos-btn.active { background: #1a1a1a; color: #fff; border-color: #555; }
+  .poster-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .poster-actions button {
+    padding: 11px; border-radius: 7px; cursor: pointer;
+    font-family: inherit; font-size: 11px; font-weight: 700;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    border: none; transition: 0.15s all;
+  }
+  .poster-actions .download-btn {
+    background: linear-gradient(135deg, #8b0000, #ff3b3b); color: #fff;
+  }
+  .poster-actions .download-btn:hover {
+    transform: translateY(-1px); box-shadow: 0 0 16px rgba(255,59,59,0.4);
+  }
+  .poster-actions .regen-btn {
+    background: #1a1a1a; color: #aaa; border: 1px solid #2a2a2a;
+  }
+  .poster-actions .regen-btn:hover { color: #fff; border-color: #555; }
+  .poster-actions .regen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .poster-status { font-size: 10px; color: #555; letter-spacing: 1px; min-height: 14px; }
 </style>
 </head>
 <body>
@@ -371,12 +538,21 @@
           <button id="previewBtn" class="secondary">▶ Preview</button>
           <button id="stopBtn" class="secondary" disabled>■ Stop</button>
         </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <label style="margin:0;flex-shrink:0;">Format:</label>
+          <select id="formatSelect" style="flex:1;font-size:12px;padding:7px 10px;">
+            <option value="auto" selected>Auto (best available)</option>
+            <option value="mp4">MP4 — most compatible (TikTok, IG, YT)</option>
+            <option value="mov">MOV — Apple-friendly (iMovie, Final Cut)</option>
+            <option value="webm">WebM — smaller file, web-optimized</option>
+          </select>
+        </div>
         <div class="button-row">
-          <button id="recordBtn">● Record MP4</button>
+          <button id="recordBtn">● Record</button>
           <button id="downloadBtn" class="secondary" disabled>↓ Download Video</button>
         </div>
         <button id="downloadAudioBtn" class="secondary" disabled style="margin-top:10px">↓ Audio Only (WAV) · for CapCut</button>
-        <button id="scheduleBtn" class="secondary" disabled style="margin-top:10px;background:linear-gradient(135deg,#0a1a3a,#051020);border-color:#204080;">☁️ Upload &amp; Post Now</button>
+        <button id="scheduleBtn" class="secondary" disabled title="Record an MP4 first to enable upload &amp; posting" style="margin-top:10px;background:linear-gradient(135deg,#0a1a3a,#051020);border-color:#204080;">☁️ Upload &amp; Post / Schedule</button>
         <div class="cost-note" style="margin-top:6px">If CapCut chops the audio: import the video, MUTE its track, then add this WAV as new audio at 0:00</div>
       </div>
     </div>
@@ -509,6 +685,42 @@
           </label>
         </div>
         <button id="generateAllBtn" class="big-btn">⚡ Generate Everything</button>
+
+        <!-- Cost Estimator -->
+        <div class="cost-estimator" id="costEstimator">
+          <div class="cost-est-head">
+            <span>💰 Estimated Cost</span>
+            <span class="cost-total" id="costTotal">$0.000</span>
+          </div>
+          <div class="cost-breakdown">
+            <div class="cost-line claude">
+              <span class="svc">Claude</span>
+              <span class="val" id="costClaude">$0.000</span>
+            </div>
+            <div class="cost-line fal">
+              <span class="svc">FAL Images</span>
+              <span class="val" id="costFal">$0.000</span>
+            </div>
+            <div class="cost-line eleven">
+              <span class="svc">ElevenLabs</span>
+              <span class="val" id="costEleven">$0.000</span>
+            </div>
+          </div>
+          <div class="spending-stats">
+            <div class="stat" title="Spent today (this device)">
+              <div class="lbl">Today</div>
+              <div class="val" id="spendToday">$0.00</div>
+            </div>
+            <div class="stat" title="Spent in the last 7 days">
+              <div class="lbl">7 days</div>
+              <div class="val" id="spendWeek">$0.00</div>
+            </div>
+            <div class="stat" id="spendAllStat" title="All-time total · double-click to reset">
+              <div class="lbl">All-time</div>
+              <div class="val" id="spendAll">$0.00</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="panel">
@@ -839,6 +1051,66 @@
   </div>
 
 
+  <!-- ══ EPISODE POSTER GENERATOR ══ -->
+  <div class="panel">
+    <h2>
+      <span><span class="num" style="background:#8b0000">🎬</span>Episode Poster</span>
+      <div class="poster-status" id="posterStatus">Generate script first</div>
+    </h2>
+    <div class="poster-panel-grid">
+      <div class="poster-canvas-wrap empty" id="posterCanvasWrap">
+        <canvas id="posterCanvas" width="540" height="960"></canvas>
+      </div>
+      <div class="poster-controls">
+        <div class="field" style="margin:0;">
+          <label>Style</label>
+          <div class="poster-style-row">
+            <button type="button" class="poster-style-btn active" data-style="cinematic">🎞️ Cinematic</button>
+            <button type="button" class="poster-style-btn" data-style="minimal">⬜ Minimal</button>
+            <button type="button" class="poster-style-btn" data-style="vintage">📽️ Vintage</button>
+          </div>
+        </div>
+        <div class="field" style="margin:0;">
+          <label>Background source</label>
+          <select id="posterSource">
+            <option value="scene-1">Scene 1 (default)</option>
+          </select>
+        </div>
+        <div class="field" style="margin:0;">
+          <label>Poster text</label>
+          <select id="posterTextSource" style="margin-bottom:6px;">
+            <option value="title">Main title (default)</option>
+            <option value="custom">✎ Custom (edit below)</option>
+          </select>
+          <textarea id="posterCustomText" style="min-height:64px;font-size:12px;line-height:1.4;" placeholder="Type your own quote, or pick a scene above…"></textarea>
+        </div>
+        <div class="field" style="margin:0;">
+          <label>Position &amp; format</label>
+          <div class="poster-position-row" style="margin-bottom:6px;">
+            <button type="button" class="poster-pos-btn" data-pos="top">↑ Top</button>
+            <button type="button" class="poster-pos-btn active" data-pos="bottom">↓ Bottom</button>
+            <button type="button" class="poster-pos-btn" data-pos="center">◉ Center</button>
+          </div>
+          <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:#aaa;">
+            <label class="check-row"><input type="checkbox" id="posterUppercase" checked> UPPERCASE</label>
+            <label class="check-row"><input type="checkbox" id="posterQuoteMarks"> "Quote marks"</label>
+          </div>
+        </div>
+        <div class="field" style="margin:0;">
+          <label class="check-row" style="font-size:11px;color:#aaa;">
+            <input type="checkbox" id="posterShowBrand" checked>
+            Show "DARK PSYCHO" mark
+          </label>
+        </div>
+        <div class="poster-actions">
+          <button type="button" class="regen-btn" id="posterRegenBtn" title="Generate a dedicated AI poster image (extra ~$0.005)">⚡ AI Poster</button>
+          <button type="button" class="download-btn" id="posterDownloadBtn">💾 Download PNG</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
   <!-- ══ 7-DAY CONTENT CALENDAR ══ -->
   <div class="panel calendar-panel">
     <h2>
@@ -899,7 +1171,31 @@
         <textarea id="schedCaption" style="min-height:80px;font-size:12px;" placeholder="Post caption…"></textarea>
       </div>
 
-      <div style="background:#0a1a0a;border:1px solid #1a3a1a;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:11px;color:#60cc80;letter-spacing:0.5px;">
+      <!-- Posting mode: Now vs Schedule -->
+      <div class="field" style="margin-bottom:14px;">
+        <label>Posting Mode</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <button type="button" class="sched-mode-btn active" data-mode="now" id="schedModeNow"
+            style="padding:10px;border-radius:7px;border:1px solid #1a3a1a;background:#0a1a0a;color:#60cc80;font-weight:700;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;font-family:inherit;">▶ Post Now</button>
+          <button type="button" class="sched-mode-btn" data-mode="later" id="schedModeLater"
+            style="padding:10px;border-radius:7px;border:1px solid #2a2a2a;background:#121212;color:#888;font-weight:700;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;font-family:inherit;">⏰ Schedule</button>
+        </div>
+      </div>
+
+      <!-- Schedule time picker (shown only when mode = later) -->
+      <div class="field" id="schedTimeBlock" style="display:none;margin-bottom:14px;">
+        <label>When to post (your local time)</label>
+        <input type="datetime-local" id="schedTime" style="width:100%;background:#080808;border:1px solid #252525;color:#e5e5e5;padding:11px 13px;border-radius:6px;font-family:inherit;font-size:13px;color-scheme:dark;">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
+          <button type="button" class="quick-time" data-mins="60" style="padding:6px 10px;background:#0a0a0a;border:1px solid #2a2a2a;color:#888;border-radius:5px;font-size:10px;cursor:pointer;font-family:inherit;letter-spacing:0.5px;">+1 hr</button>
+          <button type="button" class="quick-time" data-mins="180" style="padding:6px 10px;background:#0a0a0a;border:1px solid #2a2a2a;color:#888;border-radius:5px;font-size:10px;cursor:pointer;font-family:inherit;letter-spacing:0.5px;">+3 hrs</button>
+          <button type="button" class="quick-time" data-when="tomorrow9" style="padding:6px 10px;background:#0a0a0a;border:1px solid #2a2a2a;color:#888;border-radius:5px;font-size:10px;cursor:pointer;font-family:inherit;letter-spacing:0.5px;">Tomorrow 9 AM</button>
+          <button type="button" class="quick-time" data-when="tomorrow18" style="padding:6px 10px;background:#0a0a0a;border:1px solid #2a2a2a;color:#888;border-radius:5px;font-size:10px;cursor:pointer;font-family:inherit;letter-spacing:0.5px;">Tomorrow 6 PM</button>
+        </div>
+      </div>
+
+      <!-- Dynamic confirmation banner -->
+      <div id="schedBanner" style="background:#0a1a0a;border:1px solid #1a3a1a;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:11px;color:#60cc80;letter-spacing:0.5px;">
         ✅ Video will be posted immediately after upload.
       </div>
 
@@ -2408,17 +2704,45 @@ async function runPlayback(record) {
   let ext = 'webm';
 
   if (record) {
-    const candidates = [
+    const formatChoice = document.getElementById('formatSelect')?.value || 'auto';
+    const mp4Candidates = [
       'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
       'video/mp4;codecs=h264,mp4a',
-      'video/mp4',
+      'video/mp4'
+    ];
+    const webmCandidates = [
       'video/webm;codecs=vp9,opus',
       'video/webm;codecs=vp8,opus',
       'video/webm'
     ];
+    let candidates;
+    let forceExt = null;
+    if (formatChoice === 'mp4') {
+      candidates = mp4Candidates;
+      forceExt = 'mp4';
+    } else if (formatChoice === 'mov') {
+      // .mov uses the MP4 container in browser MediaRecorder; just rename on save
+      candidates = mp4Candidates;
+      forceExt = 'mov';
+    } else if (formatChoice === 'webm') {
+      candidates = webmCandidates;
+      forceExt = 'webm';
+    } else {
+      // auto — try MP4 first, fall back to WebM
+      candidates = [...mp4Candidates, ...webmCandidates];
+    }
     for (const c of candidates) if (MediaRecorder.isTypeSupported(c)) { mimeType = c; break; }
-    if (!mimeType) { setStatus('Browser does not support video recording', 'error'); playing = false; return; }
-    ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+    if (!mimeType) {
+      // If user requested a specific format and it's not supported, fall back to anything available
+      if (formatChoice !== 'auto') {
+        const fallback = [...mp4Candidates, ...webmCandidates];
+        for (const c of fallback) if (MediaRecorder.isTypeSupported(c)) { mimeType = c; break; }
+      }
+      if (!mimeType) { setStatus('Browser does not support video recording', 'error'); playing = false; return; }
+      setStatus(`${formatChoice.toUpperCase()} not supported in this browser — using fallback format`, 'info');
+    }
+    if (forceExt) ext = forceExt;
+    else ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
     canvasStream = canvas.captureStream(30);
     audioDest = audioCtx.createMediaStreamDestination();
     const audioTrack = audioDest.stream.getAudioTracks()[0];
@@ -3647,6 +3971,72 @@ async function uploadToCloudinary(videoBlob, preset) {
   return data.secure_url;
 }
 
+// Post via Make.com webhook (direct, no Ayrshare). The Make scenario decides
+// what to do with the payload (post directly via TikTok/IG/YT modules, route to
+// Buffer/Hootsuite, etc.). Returns the parsed JSON response if any.
+async function postViaMakeWebhook(webhookUrl, payload) {
+  let res;
+  try {
+    res = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  } catch (networkErr) {
+    throw new Error('Make.com webhook unreachable: ' + (networkErr?.message || 'network error'));
+  }
+  // Make.com webhooks usually return 200 with "Accepted" body when scenario is queued.
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Make.com webhook failed (HTTP ${res.status})${text ? ' — ' + text.slice(0, 200) : ''}`);
+  }
+  // Try to parse JSON, fall back to text
+  return await res.json().catch(async () => {
+    const text = await res.text().catch(() => '');
+    return { raw: text };
+  });
+}
+
+// Robust Ayrshare error extractor — handles strings, objects, arrays, per-platform errors
+function extractAyrshareError(data, status) {
+  if (!data || typeof data !== 'object') return 'HTTP ' + status + ' (no response body)';
+  // String message
+  if (typeof data.message === 'string' && data.message.trim()) return data.message.trim();
+  // Per-platform error object: { tiktok: {status:'error', message:'...'}, ... }
+  if (data.message && typeof data.message === 'object' && !Array.isArray(data.message)) {
+    const failures = Object.entries(data.message)
+      .filter(([k, v]) => v && (v.status === 'error' || v.error || v.message))
+      .map(([k, v]) => `${k}: ${typeof v === 'string' ? v : (v.message || v.error || 'unknown error')}`);
+    if (failures.length) return failures.join(' | ');
+  }
+  // String error
+  if (typeof data.error === 'string' && data.error.trim()) return data.error.trim();
+  // Array of errors (strings or objects)
+  if (Array.isArray(data.errors) && data.errors.length) {
+    return data.errors.map(e => {
+      if (typeof e === 'string') return e;
+      if (e && typeof e === 'object') {
+        return e.message || e.error || e.action || JSON.stringify(e);
+      }
+      return String(e);
+    }).join(' | ');
+  }
+  // posts array (Ayrshare success returns posts; failures may include in posts too)
+  if (Array.isArray(data.posts) && data.posts.length) {
+    const failed = data.posts.filter(p => p?.status === 'error');
+    if (failed.length) {
+      return failed.map(p => `${p.platform || '?'}: ${p.message || p.error || 'unknown'}`).join(' | ');
+    }
+  }
+  // Last resort: small JSON dump
+  try {
+    const dump = JSON.stringify(data);
+    return 'HTTP ' + status + ' — ' + (dump.length > 250 ? dump.slice(0, 250) + '…' : dump);
+  } catch {
+    return 'HTTP ' + status;
+  }
+}
+
 async function postViaAyrshare(videoUrl, caption, platforms, scheduleDate, apiKey) {
   const body = {
     post: caption,
@@ -3654,6 +4044,8 @@ async function postViaAyrshare(videoUrl, caption, platforms, scheduleDate, apiKe
     mediaUrls: [videoUrl],
     isVideo: true
   };
+  // Ayrshare expects ISO 8601 in scheduleDate (UTC). Add only if scheduling.
+  if (scheduleDate) body.scheduleDate = scheduleDate;
 
   let res, data;
   try {
@@ -3674,7 +4066,15 @@ async function postViaAyrshare(videoUrl, caption, platforms, scheduleDate, apiKe
     const r2 = await fetch(webhook, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'post', ayrshare_key: apiKey, video_url: videoUrl, caption, platforms, is_video: true })
+      body: JSON.stringify({
+        action: 'post',
+        ayrshare_key: apiKey,
+        video_url: videoUrl,
+        caption,
+        platforms,
+        is_video: true,
+        ...(scheduleDate ? { schedule_date: scheduleDate } : {})
+      })
     });
     if (!r2.ok) throw new Error('Post failed via Make.com: ' + r2.status);
     return await r2.json().catch(() => ({}));
@@ -3682,17 +4082,8 @@ async function postViaAyrshare(videoUrl, caption, platforms, scheduleDate, apiKe
 
   // Ayrshare returns per-platform results — check if all failed
   if (!res.ok || data.status === 'error') {
-    let msg = '';
-    if (typeof data.message === 'object') {
-      // Per-platform results object
-      const failures = Object.entries(data.message || {})
-        .filter(([k, v]) => v?.status === 'error')
-        .map(([k, v]) => `${k}: ${v?.message || v?.error || 'unknown'}`);
-      msg = failures.length ? failures.join(' | ') : JSON.stringify(data.message);
-    } else {
-      msg = data.message || data.error || data.errors?.join(', ') || JSON.stringify(data) || String(res.status);
-    }
-    throw new Error(msg || 'Unknown Ayrshare error (status ' + res.status + ')');
+    console.error('[Ayrshare error response]', data); // for DevTools inspection
+    throw new Error(extractAyrshareError(data, res.status));
   }
   // Check for partial success (some platforms may have failed)
   if (data.message && typeof data.message === 'object') {
@@ -3702,6 +4093,66 @@ async function postViaAyrshare(videoUrl, caption, platforms, scheduleDate, apiKe
     if (failures.length) console.warn('Partial failures:', failures);
   }
   return data;
+}
+
+// ── Schedule mode helpers ──
+function setSchedMode(mode) {
+  const nowBtn = document.getElementById('schedModeNow');
+  const laterBtn = document.getElementById('schedModeLater');
+  const block = document.getElementById('schedTimeBlock');
+  const banner = document.getElementById('schedBanner');
+  const confirmBtn = document.getElementById('schedConfirmBtn');
+  if (!nowBtn || !laterBtn) return;
+
+  const isLater = mode === 'later';
+  // Toggle button styles
+  nowBtn.classList.toggle('active', !isLater);
+  laterBtn.classList.toggle('active', isLater);
+  nowBtn.style.background = !isLater ? '#0a1a0a' : '#121212';
+  nowBtn.style.borderColor = !isLater ? '#1a3a1a' : '#2a2a2a';
+  nowBtn.style.color = !isLater ? '#60cc80' : '#888';
+  laterBtn.style.background = isLater ? '#1a0a2a' : '#121212';
+  laterBtn.style.borderColor = isLater ? '#3a1a5a' : '#2a2a2a';
+  laterBtn.style.color = isLater ? '#a78bfa' : '#888';
+  // Show/hide schedule time block
+  if (block) block.style.display = isLater ? 'block' : 'none';
+  // Update banner + confirm button text
+  if (isLater) {
+    updateSchedBanner();
+    if (confirmBtn) confirmBtn.textContent = '📅 Schedule Post';
+  } else {
+    if (banner) {
+      banner.style.background = '#0a1a0a';
+      banner.style.borderColor = '#1a3a1a';
+      banner.style.color = '#60cc80';
+      banner.textContent = '✅ Video will be posted immediately after upload.';
+    }
+    if (confirmBtn) confirmBtn.textContent = '🚀 Post Now';
+  }
+}
+function updateSchedBanner() {
+  const banner = document.getElementById('schedBanner');
+  const timeEl = document.getElementById('schedTime');
+  if (!banner) return;
+  banner.style.background = '#1a0a2a';
+  banner.style.borderColor = '#3a1a5a';
+  banner.style.color = '#a78bfa';
+  if (timeEl?.value) {
+    const dt = new Date(timeEl.value);
+    if (!isNaN(dt.getTime())) {
+      const fmt = dt.toLocaleString(undefined, {
+        weekday: 'short', month: 'short', day: 'numeric',
+        hour: 'numeric', minute: '2-digit'
+      });
+      banner.textContent = `📅 Will be posted on ${fmt}`;
+      return;
+    }
+  }
+  banner.textContent = '📅 Pick a date & time below.';
+}
+function fmtDateTimeLocal(d) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 // Open schedule modal
@@ -3717,17 +4168,22 @@ function openScheduleModal() {
     captionEl.value = parts.join('\n\n');
   }
 
-  // Default schedule: next round hour
+  // Default schedule: next round hour (only used if user picks "Schedule")
   const timeEl = document.getElementById('schedTime');
   if (timeEl) {
-    const now = new Date();
-    now.setHours(now.getHours() + 1, 0, 0, 0);
-    // Format for datetime-local input
-    const pad = n => String(n).padStart(2, '0');
-    timeEl.value = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:00`;
+    const next = new Date();
+    next.setHours(next.getHours() + 1, 0, 0, 0);
+    timeEl.value = fmtDateTimeLocal(next);
+    // datetime-local has no native min, but enforce in code: set min to "now"
+    timeEl.min = fmtDateTimeLocal(new Date());
   }
 
+  // Reset to "Post Now" mode by default
+  setSchedMode('now');
+
   document.getElementById('schedStatus').textContent = '';
+  const bar = document.getElementById('schedProgressBar');
+  if (bar) bar.style.width = '0';
   const modal = document.getElementById('scheduleModal');
   modal.style.display = 'flex';
 }
@@ -3737,43 +4193,120 @@ function closeScheduleModal() {
   document.getElementById('scheduleModal').style.display = 'none';
 }
 
-// Execute upload + schedule
+// Execute upload + post (or schedule)
+// Service priority: Make.com webhook (if configured) → Ayrshare fallback
 async function executeSchedule() {
   const preset = document.getElementById('cloudinaryPreset')?.value.trim();
   const ayrshareKey = document.getElementById('ayrshareKey')?.value.trim();
+  const makeWebhook = document.getElementById('makeWebhook')?.value.trim()
+    || localStorage.getItem('make_webhook') || '';
   const caption = document.getElementById('schedCaption')?.value.trim();
-  const schedTime = document.getElementById('schedTime')?.value;
   const platforms = [];
   if (document.getElementById('platTikTok')?.checked) platforms.push('tiktok');
   if (document.getElementById('platInstagram')?.checked) platforms.push('instagram');
   if (document.getElementById('platYouTube')?.checked) platforms.push('youtube');
 
+  // Determine posting mode (now vs scheduled)
+  const isLater = !!document.querySelector('.sched-mode-btn.active[data-mode="later"]');
+  let scheduleDateISO = null;
+  if (isLater) {
+    const schedTimeStr = document.getElementById('schedTime')?.value;
+    if (!schedTimeStr) {
+      document.getElementById('schedStatus').textContent = '⚠ Pick a date & time to schedule';
+      return;
+    }
+    const dt = new Date(schedTimeStr);
+    if (isNaN(dt.getTime())) {
+      document.getElementById('schedStatus').textContent = '⚠ Invalid schedule time';
+      return;
+    }
+    if (dt.getTime() < Date.now() + 2 * 60 * 1000) {
+      document.getElementById('schedStatus').textContent = '⚠ Schedule time must be at least 2 minutes in the future';
+      return;
+    }
+    scheduleDateISO = dt.toISOString();
+  }
+
+  // Pick the posting service: Make.com first if configured, else Ayrshare
+  const useMake = !!makeWebhook;
+  const useAyrshare = !!ayrshareKey;
+
   if (!preset) { document.getElementById('schedStatus').textContent = '⚠ Add Cloudinary upload preset in API Keys'; return; }
-  if (!ayrshareKey) { document.getElementById('schedStatus').textContent = '⚠ Add Ayrshare API key in API Keys'; return; }
+  if (!useMake && !useAyrshare) {
+    document.getElementById('schedStatus').textContent = '⚠ Configure either Make.com webhook OR Ayrshare API key';
+    return;
+  }
   if (platforms.length === 0) { document.getElementById('schedStatus').textContent = '⚠ Select at least one platform'; return; }
   if (!currentBlob) { document.getElementById('schedStatus').textContent = '⚠ Record a video first'; return; }
 
   const confirmBtn = document.getElementById('schedConfirmBtn');
   confirmBtn.disabled = true;
   const bar = document.getElementById('schedProgressBar');
+  const progress = document.getElementById('schedProgress');
+  if (progress) progress.style.display = 'block';
+  const statusEl = document.getElementById('schedStatus');
 
   try {
     // Step 1: Upload to Cloudinary
-    document.getElementById('schedStatus').textContent = '☁️ Uploading to Cloudinary…';
-    bar.style.width = '35%';
+    statusEl.textContent = '☁️ Uploading to Cloudinary…';
+    bar.style.width = '30%';
     const videoUrl = await uploadToCloudinary(currentBlob, preset);
-    bar.style.width = '70%';
+    bar.style.width = '60%';
 
-    // Step 2: Post via Ayrshare
-    document.getElementById('schedStatus').textContent = '📡 Scheduling via Ayrshare…';
     const fullCaption = [caption, script?.hashtags?.map(h => '#'+h).join(' ')].filter(Boolean).join('\n\n');
-    await postViaAyrshare(videoUrl, fullCaption, platforms, null, ayrshareKey);
+    const action = isLater ? 'schedule' : 'post';
+
+    // Step 2: Post via Make.com (primary) or Ayrshare (fallback)
+    let usedService = '';
+    let lastError = null;
+    if (useMake) {
+      try {
+        statusEl.textContent = isLater ? '📅 Sending to Make.com…' : '📡 Sending to Make.com…';
+        await postViaMakeWebhook(makeWebhook, {
+          action,
+          video_url: videoUrl,
+          caption: fullCaption,
+          platforms,
+          is_video: true,
+          schedule_date: scheduleDateISO,           // ISO 8601 in UTC, or null
+          // Optional: included for scenarios that use Ayrshare under the hood
+          ayrshare_key: ayrshareKey || null,
+          // Convenience metadata
+          script_title: script?.mainTitle || null,
+          source: 'darkpsycho'
+        });
+        usedService = 'Make.com';
+      } catch (e) {
+        lastError = e;
+        console.warn('[Make.com failed]', e);
+        // Auto-fallback to Ayrshare only if it's also configured
+        if (useAyrshare) {
+          statusEl.textContent = '⚠ Make.com failed, trying Ayrshare…';
+          await postViaAyrshare(videoUrl, fullCaption, platforms, scheduleDateISO, ayrshareKey);
+          usedService = 'Ayrshare (fallback)';
+        } else {
+          throw e;
+        }
+      }
+    } else {
+      statusEl.textContent = isLater ? '📅 Scheduling via Ayrshare…' : '📡 Posting via Ayrshare…';
+      await postViaAyrshare(videoUrl, fullCaption, platforms, scheduleDateISO, ayrshareKey);
+      usedService = 'Ayrshare';
+    }
+
     bar.style.width = '100%';
 
-    document.getElementById('schedStatus').textContent = `✅ Posted to ${platforms.join(' + ')}! Check your accounts.`;
-    setTimeout(() => closeScheduleModal(), 3000);
+    if (isLater) {
+      const when = new Date(scheduleDateISO).toLocaleString(undefined, {
+        weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+      });
+      statusEl.textContent = `✅ Scheduled for ${when} via ${usedService} → ${platforms.join(' + ')}`;
+    } else {
+      statusEl.textContent = `✅ Sent via ${usedService} → ${platforms.join(' + ')}! Check your accounts.`;
+    }
+    setTimeout(() => closeScheduleModal(), 3500);
   } catch (err) {
-    document.getElementById('schedStatus').textContent = '❌ ' + err.message;
+    document.getElementById('schedStatus').textContent = '❌ ' + (err?.message || String(err));
     bar.style.width = '0';
   } finally {
     confirmBtn.disabled = false;
@@ -3793,6 +4326,36 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('scheduleModal')?.addEventListener('click', e => {
     if (e.target === document.getElementById('scheduleModal')) closeScheduleModal();
   });
+
+  // Mode toggle: Post Now / Schedule
+  document.querySelectorAll('.sched-mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => setSchedMode(btn.dataset.mode));
+  });
+
+  // Quick-time presets
+  document.querySelectorAll('.quick-time').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const timeEl = document.getElementById('schedTime');
+      if (!timeEl) return;
+      const now = new Date();
+      let target;
+      if (btn.dataset.mins) {
+        target = new Date(now.getTime() + parseInt(btn.dataset.mins) * 60000);
+      } else if (btn.dataset.when === 'tomorrow9') {
+        target = new Date(now); target.setDate(target.getDate() + 1); target.setHours(9, 0, 0, 0);
+      } else if (btn.dataset.when === 'tomorrow18') {
+        target = new Date(now); target.setDate(target.getDate() + 1); target.setHours(18, 0, 0, 0);
+      } else {
+        return;
+      }
+      timeEl.value = fmtDateTimeLocal(target);
+      updateSchedBanner();
+    });
+  });
+
+  // Update banner when user manually edits the time
+  document.getElementById('schedTime')?.addEventListener('change', updateSchedBanner);
+  document.getElementById('schedTime')?.addEventListener('input', updateSchedBanner);
 });
 
 
@@ -4411,6 +4974,733 @@ function init() {
   }
 }
 document.fonts.ready.then(init);
+</script>
+
+<!-- Pre-flight confirmation modal -->
+<div class="preflight-overlay" id="preflightOverlay" role="dialog" aria-modal="true" aria-labelledby="pfTitle">
+  <div class="preflight-box">
+    <h3 id="pfTitle">Pre-flight Check</h3>
+    <div class="sub">Confirm before spending API credits</div>
+    <div class="preflight-row"><span class="lbl">Topic</span><span class="val" id="pfTopic">—</span></div>
+    <div class="preflight-row"><span class="lbl">Scenes</span><span class="val" id="pfScenes">—</span></div>
+    <div class="preflight-row"><span class="lbl">Voice Model</span><span class="val" id="pfVoice">—</span></div>
+    <div class="preflight-row"><span class="lbl">Claude (script)</span><span class="val" id="pfClaude">$0.000</span></div>
+    <div class="preflight-row"><span class="lbl">FAL (images)</span><span class="val" id="pfFal">$0.000</span></div>
+    <div class="preflight-row"><span class="lbl">ElevenLabs (TTS)</span><span class="val" id="pfEleven">$0.000</span></div>
+    <div class="preflight-total">
+      <span class="lbl">Total Estimate</span>
+      <span class="val" id="pfTotal">$0.000</span>
+    </div>
+    <label class="pf-cb"><input type="checkbox" id="pfSkipNext"> Don't ask again this session</label>
+    <div class="preflight-buttons">
+      <button class="cancel" id="pfCancelBtn" type="button">Cancel</button>
+      <button class="confirm" id="pfConfirmBtn" type="button">⚡ Generate</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// =========================================================
+//  COST ESTIMATOR + SPENDING TRACKER (added enhancement)
+// =========================================================
+(function() {
+  // Approximate pricing (USD). Tune in PRICING below if your actual rates differ.
+  const PRICING = {
+    claude: {
+      // Claude Sonnet rates (per 1M tokens)
+      inputPer1M: 3,
+      outputPer1M: 15,
+      // Average tokens per script generation (approximate, based on prompt size)
+      avgInTokens: 1500,
+      avgOutTokensPerScene: 500
+    },
+    fal: {
+      // FLUX schnell on FAL.ai — approximate per image
+      perImage: 0.005
+    },
+    eleven: {
+      // Per 1K characters by model (approximate Creator-tier rates)
+      eleven_v3: 0.10,
+      eleven_turbo_v2_5: 0.05,
+      eleven_multilingual_v2: 0.10,
+      // Average characters per scene narration
+      avgCharsPerScene: 150
+    }
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const fmt = (n, d) => '$' + Number(n).toFixed(d ?? 3);
+
+  function calcCost() {
+    const sceneCount = parseInt($('sceneCount')?.value || '7');
+    const voiceModel = $('elevenModel')?.value || 'eleven_v3';
+    const isQuotes = (typeof window.contentMode !== 'undefined' && window.contentMode === 'quotes');
+    const quoteBg = $('quoteBg')?.value || 'ai';
+
+    // Claude: input is ~fixed; output scales with scene count
+    const cIn = PRICING.claude.avgInTokens;
+    const cOut = PRICING.claude.avgOutTokensPerScene * sceneCount;
+    const claudeCost = (cIn / 1e6) * PRICING.claude.inputPer1M + (cOut / 1e6) * PRICING.claude.outputPer1M;
+
+    // FAL: 1 image per scene, except in quotes-mode without AI background
+    const imageCount = (isQuotes && quoteBg !== 'ai') ? 0 : sceneCount;
+    const falCost = imageCount * PRICING.fal.perImage;
+
+    // ElevenLabs: chars × scenes × per-1K rate
+    const elevenRate = PRICING.eleven[voiceModel] ?? PRICING.eleven.eleven_v3;
+    const totalChars = sceneCount * PRICING.eleven.avgCharsPerScene;
+    const elevenCost = (totalChars / 1000) * elevenRate;
+
+    return {
+      claudeCost, falCost, elevenCost,
+      total: claudeCost + falCost + elevenCost,
+      sceneCount, voiceModel, imageCount, totalChars
+    };
+  }
+
+  function updateCostUI() {
+    const c = calcCost();
+    if ($('costClaude')) $('costClaude').textContent = fmt(c.claudeCost);
+    if ($('costFal')) $('costFal').textContent = fmt(c.falCost);
+    if ($('costEleven')) $('costEleven').textContent = fmt(c.elevenCost);
+    const tot = $('costTotal');
+    if (tot) {
+      tot.textContent = fmt(c.total);
+      tot.classList.remove('medium', 'high');
+      if (c.total > 0.10) tot.classList.add('high');
+      else if (c.total > 0.05) tot.classList.add('medium');
+    }
+    updateSpendingStatsUI();
+  }
+
+  // ── Spending log (localStorage) ──
+  const LOG_KEY = 'darkpsycho_spending_log';
+  function getLog() {
+    try { return JSON.parse(localStorage.getItem(LOG_KEY) || '[]'); }
+    catch { return []; }
+  }
+  function logSpend(amount, meta) {
+    const log = getLog();
+    log.push({ ts: Date.now(), amount, ...(meta || {}) });
+    if (log.length > 1000) log.splice(0, log.length - 1000);
+    localStorage.setItem(LOG_KEY, JSON.stringify(log));
+    updateSpendingStatsUI();
+  }
+  function updateSpendingStatsUI() {
+    const log = getLog();
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    const weekStart = new Date(todayStart); weekStart.setDate(weekStart.getDate() - 6);
+    let today = 0, week = 0, all = 0;
+    for (const e of log) {
+      all += e.amount;
+      if (e.ts >= weekStart.getTime()) week += e.amount;
+      if (e.ts >= todayStart.getTime()) today += e.amount;
+    }
+    if ($('spendToday')) $('spendToday').textContent = fmt(today, 2);
+    if ($('spendWeek')) $('spendWeek').textContent = fmt(week, 2);
+    if ($('spendAll')) $('spendAll').textContent = fmt(all, 2);
+  }
+  function resetSpending() {
+    if (!confirm('Reset all-time spending counter? Local cost history will be cleared.')) return;
+    localStorage.removeItem(LOG_KEY);
+    updateSpendingStatsUI();
+  }
+
+  // ── Pre-flight modal ──
+  let _pfSkipSession = false;
+  function openPreflight(onConfirm) {
+    const c = calcCost();
+    const topic = $('topic')?.value.trim() || '(no topic)';
+    const voiceLabel = document.querySelector('#elevenModel option:checked')?.textContent || c.voiceModel;
+    const set = (id, v) => { const el = $(id); if (el) el.textContent = v; };
+    set('pfTopic', topic.length > 60 ? topic.slice(0, 60) + '…' : topic);
+    set('pfScenes', String(c.sceneCount));
+    set('pfVoice', voiceLabel);
+    set('pfClaude', fmt(c.claudeCost));
+    set('pfFal', fmt(c.falCost));
+    set('pfEleven', fmt(c.elevenCost));
+    set('pfTotal', fmt(c.total));
+    if ($('pfSkipNext')) $('pfSkipNext').checked = false;
+    $('preflightOverlay').classList.add('show');
+
+    const cleanup = () => {
+      $('preflightOverlay').classList.remove('show');
+      $('pfConfirmBtn').onclick = null;
+      $('pfCancelBtn').onclick = null;
+      document.removeEventListener('keydown', escHandler);
+    };
+    const escHandler = (e) => { if (e.key === 'Escape') cleanup(); };
+    document.addEventListener('keydown', escHandler);
+
+    $('pfConfirmBtn').onclick = () => {
+      _pfSkipSession = !!$('pfSkipNext')?.checked;
+      cleanup();
+      onConfirm(c);
+    };
+    $('pfCancelBtn').onclick = cleanup;
+  }
+
+  // ── Wire up: intercept Generate Everything click ──
+  function install() {
+    const btn = $('generateAllBtn');
+    if (!btn) return;
+    const original = btn.onclick;
+
+    btn.onclick = (ev) => {
+      // Skip preflight if missing keys/topic — let original handler show its error
+      const hasKeys = $('anthropicKey')?.value.trim()
+                    && $('falKey')?.value.trim()
+                    && $('elevenKey')?.value.trim();
+      const hasTopic = !!$('topic')?.value.trim();
+      if (!hasKeys || !hasTopic || _pfSkipSession) {
+        return original?.call(btn, ev);
+      }
+      openPreflight(async (c) => {
+        try {
+          await original?.call(btn, ev);
+          // Log spending after generation completes successfully
+          logSpend(c.total, { sceneCount: c.sceneCount, voiceModel: c.voiceModel });
+        } catch (_) { /* original handler already surfaces errors */ }
+      });
+    };
+
+    // Live update on relevant changes
+    ['sceneCount', 'elevenModel', 'quoteBg'].forEach(id => {
+      const el = $(id);
+      if (el) el.addEventListener('change', updateCostUI);
+    });
+    // Double-click All-time stat to reset
+    const allStat = $('spendAllStat');
+    if (allStat) allStat.addEventListener('dblclick', resetSpending);
+
+    updateCostUI();
+  }
+
+  // Hook after init runs (init is called via document.fonts.ready)
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(install);
+  } else if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', install);
+  } else {
+    install();
+  }
+})();
+
+// =========================================================
+//  EPISODE POSTER GENERATOR (added enhancement)
+// =========================================================
+(function() {
+  const $ = (id) => document.getElementById(id);
+  const POSTER_W = 1080, POSTER_H = 1920; // Output PNG resolution
+  let posterCanvas, posterCtx;
+  let currentStyle = 'cinematic';
+  let currentPosition = 'bottom';
+  let currentBgSource = 'scene-1'; // 'scene-N' or 'ai'
+  let aiPosterImage = null; // Image element of AI-generated poster (if any)
+
+  const STYLES = {
+    cinematic: {
+      darken: 0.42, vignette: 0.78, contrast: 1.08,
+      titleStyle: 'gradient-red', titleStroke: null, grain: 0,
+      sepia: 0,
+      promptSuffix: 'cinematic movie poster, dramatic moody atmospheric lighting, intense atmosphere, film noir aesthetic, deep shadows, vertical composition, professional poster art'
+    },
+    minimal: {
+      darken: 0.55, vignette: 0.35, contrast: 1.0,
+      titleStyle: 'white', titleStroke: null, grain: 0, sepia: 0,
+      promptSuffix: 'minimalist art poster, clean composition, single dramatic central subject, mostly negative space, modern editorial design, vertical composition'
+    },
+    vintage: {
+      darken: 0.32, vignette: 0.55, contrast: 0.95, sepia: 0.55,
+      titleStyle: 'cream', titleStroke: '#1a0c00', grain: 0.18,
+      promptSuffix: 'vintage 1970s horror movie poster, warm sepia tones, film grain texture, dramatic dim lighting, retro pulp magazine aesthetic, vertical composition'
+    }
+  };
+
+  function ensureCanvas() {
+    if (posterCanvas) return true;
+    posterCanvas = $('posterCanvas');
+    if (!posterCanvas) return false;
+    posterCanvas.width = POSTER_W;
+    posterCanvas.height = POSTER_H;
+    posterCtx = posterCanvas.getContext('2d');
+    return true;
+  }
+
+  // Get the chosen background image (HTMLImageElement) or null
+  function getBgImage() {
+    if (currentBgSource === 'ai' && aiPosterImage) return aiPosterImage;
+    const m = /^scene-(\d+)$/.exec(currentBgSource);
+    if (m && typeof window.images !== 'undefined' && Array.isArray(window.images)) {
+      const idx = parseInt(m[1], 10) - 1;
+      const img = window.images[idx];
+      if (img && img.complete) return img;
+    }
+    return null;
+  }
+
+  function drawCoverFit(ctx, img, cw, ch) {
+    const imgAR = img.width / img.height;
+    const canAR = cw / ch;
+    let dw, dh, dx, dy;
+    if (imgAR > canAR) {
+      dh = ch; dw = dh * imgAR;
+      dx = (cw - dw) / 2; dy = 0;
+    } else {
+      dw = cw; dh = dw / imgAR;
+      dx = 0; dy = (ch - dh) / 2;
+    }
+    ctx.drawImage(img, dx, dy, dw, dh);
+  }
+
+  // Wrap text into multiple lines based on max width
+  function wrapText(ctx, text, maxWidth) {
+    const words = text.split(/\s+/).filter(Boolean);
+    const lines = [];
+    let line = '';
+    for (const w of words) {
+      const test = line ? line + ' ' + w : w;
+      if (ctx.measureText(test).width <= maxWidth) line = test;
+      else { if (line) lines.push(line); line = w; }
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  function getTitleFont() {
+    // Reuse the title font selected in the main UI
+    const sel = $('titleFont');
+    return sel ? sel.value : "'Anton', sans-serif";
+  }
+
+  function drawTitle(ctx, rawText, style) {
+    let text = rawText || 'YOUR TITLE HERE';
+    const useUpper = $('posterUppercase')?.checked !== false; // default true
+    const useQuotes = $('posterQuoteMarks')?.checked === true;
+    if (useUpper) text = text.toUpperCase();
+    if (useQuotes) text = `"${text}"`;
+    const padX = POSTER_W * 0.08;
+    const maxLineWidth = POSTER_W - padX * 2;
+    // Larger initial font for short text, smaller for long
+    const charCount = text.length;
+    let fontSize;
+    if (charCount < 30) fontSize = Math.round(POSTER_W * 0.13);
+    else if (charCount < 80) fontSize = Math.round(POSTER_W * 0.10);
+    else fontSize = Math.round(POSTER_W * 0.075);
+
+    // Find font size that allows up to 6 lines fit
+    ctx.font = `900 ${fontSize}px ${getTitleFont()}`;
+    let lines = wrapText(ctx, text, maxLineWidth);
+    while (lines.length > 6 && fontSize > 44) {
+      fontSize -= 6;
+      ctx.font = `900 ${fontSize}px ${getTitleFont()}`;
+      lines = wrapText(ctx, text, maxLineWidth);
+    }
+
+    const lineHeight = Math.round(fontSize * 1.06);
+    const totalH = lines.length * lineHeight;
+
+    // Position
+    let y0;
+    if (currentPosition === 'top') y0 = POSTER_H * 0.10;
+    else if (currentPosition === 'center') y0 = (POSTER_H - totalH) / 2;
+    else y0 = POSTER_H - totalH - POSTER_H * 0.16; // bottom (default)
+
+    // Background scrim behind title for legibility
+    const scrimPad = lineHeight * 0.4;
+    ctx.save();
+    const grad = ctx.createLinearGradient(0, y0 - scrimPad, 0, y0 + totalH + scrimPad);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(0.3, 'rgba(0,0,0,0.55)');
+    grad.addColorStop(0.7, 'rgba(0,0,0,0.55)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, y0 - scrimPad, POSTER_W, totalH + scrimPad * 2);
+    ctx.restore();
+
+    // Title text styles
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.font = `900 ${fontSize}px ${getTitleFont()}`;
+
+    let fill;
+    if (style.titleStyle === 'gradient-red') {
+      fill = ctx.createLinearGradient(0, y0, 0, y0 + totalH);
+      fill.addColorStop(0, '#ff5151');
+      fill.addColorStop(1, '#8b0000');
+    } else if (style.titleStyle === 'white') {
+      fill = '#ffffff';
+    } else if (style.titleStyle === 'cream') {
+      fill = '#f0e2c0';
+    } else {
+      fill = '#ffffff';
+    }
+
+    for (let i = 0; i < lines.length; i++) {
+      const y = y0 + i * lineHeight;
+      ctx.fillStyle = fill;
+      if (style.titleStroke) {
+        ctx.lineWidth = Math.max(2, fontSize * 0.04);
+        ctx.strokeStyle = style.titleStroke;
+        ctx.strokeText(lines[i], POSTER_W / 2, y);
+      }
+      // Subtle shadow for depth
+      ctx.shadowColor = 'rgba(0,0,0,0.6)';
+      ctx.shadowBlur = 12;
+      ctx.shadowOffsetY = 4;
+      ctx.fillText(lines[i], POSTER_W / 2, y);
+      ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+    }
+  }
+
+  function drawBrandMark(ctx) {
+    if (!$('posterShowBrand')?.checked) return;
+    const brandFontSize = Math.round(POSTER_W * 0.022);
+    ctx.save();
+    ctx.font = `700 ${brandFontSize}px 'Inter', sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
+    ctx.letterSpacing = '4px';
+    // Position bottom-right
+    ctx.fillText('▌ DARK PSYCHO', POSTER_W - POSTER_W * 0.06, POSTER_H - POSTER_H * 0.025);
+    ctx.restore();
+  }
+
+  function applyGrain(ctx, cw, ch, amount) {
+    if (!amount) return;
+    const imgData = ctx.getImageData(0, 0, cw, ch);
+    const d = imgData.data;
+    const a = amount * 100;
+    for (let i = 0; i < d.length; i += 4) {
+      const noise = (Math.random() - 0.5) * a;
+      d[i] = Math.max(0, Math.min(255, d[i] + noise));
+      d[i+1] = Math.max(0, Math.min(255, d[i+1] + noise));
+      d[i+2] = Math.max(0, Math.min(255, d[i+2] + noise));
+    }
+    ctx.putImageData(imgData, 0, 0);
+  }
+
+  function renderPoster() {
+    if (!ensureCanvas()) return;
+    const wrap = $('posterCanvasWrap');
+    const status = $('posterStatus');
+    const ctx = posterCtx;
+    const style = STYLES[currentStyle];
+
+    // Clear
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, POSTER_W, POSTER_H);
+
+    const bg = getBgImage();
+    if (!bg) {
+      if (wrap) wrap.classList.add('empty');
+      if (status) status.textContent = 'Generate scene 1 first';
+      return;
+    }
+    if (wrap) wrap.classList.remove('empty');
+
+    // Draw background image (cover-fit)
+    drawCoverFit(ctx, bg, POSTER_W, POSTER_H);
+
+    // Apply contrast tweak (via filter on a temp draw — simplified using composite)
+    if (style.contrast && style.contrast !== 1.0) {
+      // No-op: keeping simple to avoid extra canvas. Style differences come from darken/vignette.
+    }
+
+    // Sepia tone (vintage)
+    if (style.sepia) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.fillStyle = `rgba(205, 153, 102, ${style.sepia})`;
+      ctx.fillRect(0, 0, POSTER_W, POSTER_H);
+      ctx.restore();
+    }
+
+    // Darken overlay
+    if (style.darken) {
+      ctx.fillStyle = `rgba(0,0,0,${style.darken})`;
+      ctx.fillRect(0, 0, POSTER_W, POSTER_H);
+    }
+
+    // Vignette
+    if (style.vignette) {
+      const vg = ctx.createRadialGradient(
+        POSTER_W/2, POSTER_H/2, POSTER_W * 0.32,
+        POSTER_W/2, POSTER_H/2, POSTER_W * 0.78
+      );
+      vg.addColorStop(0, 'rgba(0,0,0,0)');
+      vg.addColorStop(1, `rgba(0,0,0,${style.vignette})`);
+      ctx.fillStyle = vg;
+      ctx.fillRect(0, 0, POSTER_W, POSTER_H);
+    }
+
+    // Title / quote / custom text
+    drawTitle(ctx, getCurrentPosterText(), style);
+
+    // Brand mark
+    drawBrandMark(ctx);
+
+    // Grain (vintage only) — last so it goes over everything
+    if (style.grain) applyGrain(ctx, POSTER_W, POSTER_H, style.grain);
+
+    if (status) status.textContent = `${STYLES[currentStyle].titleStyle === 'cream' ? 'Vintage' : (currentStyle.charAt(0).toUpperCase() + currentStyle.slice(1))} · ${currentBgSource === 'ai' ? 'AI poster' : currentBgSource}`;
+  }
+
+  // ── Poster text helpers ──
+  function getMainTitle() {
+    return (typeof window.script !== 'undefined' && window.script?.mainTitle)
+      ? window.script.mainTitle
+      : ($('mainTitle')?.value || '');
+  }
+  function getSceneText(idx) {
+    if (typeof window.script === 'undefined' || !window.script?.scenes) return '';
+    const s = window.script.scenes[idx];
+    if (!s) return '';
+    return (s.quote || s.narration || s.title || '').trim();
+  }
+  function getCurrentPosterText() {
+    const sourceSel = $('posterTextSource');
+    const customEl = $('posterCustomText');
+    const src = sourceSel?.value || 'title';
+    if (src === 'title') return getMainTitle() || 'YOUR TITLE HERE';
+    if (src === 'custom') return (customEl?.value || '').trim() || 'YOUR QUOTE HERE';
+    const m = /^scene-(\d+)$/.exec(src);
+    if (m) {
+      const idx = parseInt(m[1], 10) - 1;
+      // If textarea was edited, use that; otherwise use scene text
+      if (customEl?.value?.trim()) return customEl.value.trim();
+      return getSceneText(idx) || `Scene ${idx + 1}`;
+    }
+    return getMainTitle() || 'YOUR TITLE HERE';
+  }
+  function refreshTextSourceDropdown() {
+    const sel = $('posterTextSource');
+    if (!sel) return;
+    const prev = sel.value;
+    const sceneCount = (typeof window.script !== 'undefined' && window.script?.scenes?.length) || 0;
+    sel.innerHTML = '';
+    const optTitle = document.createElement('option');
+    optTitle.value = 'title';
+    optTitle.textContent = 'Main title (default)';
+    sel.appendChild(optTitle);
+    for (let i = 1; i <= sceneCount; i++) {
+      const opt = document.createElement('option');
+      opt.value = `scene-${i}`;
+      // Show short preview of the quote/narration
+      const txt = getSceneText(i - 1);
+      const preview = txt.length > 40 ? txt.slice(0, 40) + '…' : txt;
+      opt.textContent = `Scene ${i}: ${preview || '(empty)'}`;
+      sel.appendChild(opt);
+    }
+    const optCustom = document.createElement('option');
+    optCustom.value = 'custom';
+    optCustom.textContent = '✎ Custom (edit below)';
+    sel.appendChild(optCustom);
+    if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
+    else sel.value = 'title';
+  }
+
+  // Update the BACKGROUND source dropdown when scene images become available
+  function refreshSourceDropdown() {
+    const sel = $('posterSource');
+    if (!sel) return;
+    const prev = sel.value;
+    const sceneCount = (typeof window.script !== 'undefined' && window.script?.scenes?.length) || 0;
+    sel.innerHTML = '';
+    for (let i = 1; i <= Math.max(sceneCount, 1); i++) {
+      const opt = document.createElement('option');
+      opt.value = `scene-${i}`;
+      opt.textContent = `Scene ${i}${i === 1 ? ' (default)' : ''}`;
+      sel.appendChild(opt);
+    }
+    if (aiPosterImage) {
+      const opt = document.createElement('option');
+      opt.value = 'ai';
+      opt.textContent = '⚡ AI Poster (generated)';
+      sel.appendChild(opt);
+    }
+    // Restore previous selection if still valid
+    if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
+    else sel.value = 'scene-1';
+    currentBgSource = sel.value;
+  }
+
+  // Generate a dedicated AI poster image via FAL
+  async function generateAIPoster() {
+    const falKey = $('falKey')?.value.trim() || localStorage.getItem('fal_api_key');
+    if (!falKey) { alert('Add your FAL.ai API key first (Section 1)'); return; }
+    const titleText = (typeof window.script !== 'undefined' && window.script?.mainTitle)
+      ? window.script.mainTitle
+      : ($('mainTitle')?.value || '');
+    if (!titleText) { alert('Generate a script first so the poster has a title to go with.'); return; }
+
+    const btn = $('posterRegenBtn');
+    const status = $('posterStatus');
+    btn.disabled = true;
+    if (status) status.textContent = '⚡ Generating AI poster…';
+
+    try {
+      const styleSuffix = STYLES[currentStyle].promptSuffix;
+      const prompt = `${styleSuffix}. Concept: ${titleText}. NO TEXT in the image. NO words. NO letters. Pure imagery only.`;
+      const body = {
+        prompt,
+        image_size: { width: 768, height: 1344 },
+        num_images: 1,
+        num_inference_steps: 4,
+        enable_safety_checker: false,
+        sync_mode: true
+      };
+      const res = await fetch('https://fal.run/fal-ai/flux/schnell', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Key ${falKey}` },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        const t = await res.text().catch(() => '');
+        throw new Error(`FAL ${res.status}: ${t.slice(0, 200)}`);
+      }
+      const data = await res.json();
+      const url = data.images?.[0]?.url;
+      if (!url) throw new Error('FAL returned no image');
+
+      // Load into Image element
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = () => reject(new Error('Failed to load AI poster image'));
+        img.src = url;
+      });
+      aiPosterImage = img;
+      refreshSourceDropdown();
+      // Auto-switch to AI poster
+      const sel = $('posterSource');
+      if (sel) { sel.value = 'ai'; currentBgSource = 'ai'; }
+      renderPoster();
+      if (status) status.textContent = '✓ AI poster ready';
+    } catch (err) {
+      if (status) status.textContent = '✗ ' + err.message;
+      console.error('[AI poster failed]', err);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function downloadPoster() {
+    if (!ensureCanvas()) return;
+    const bg = getBgImage();
+    if (!bg) { alert('No image to render. Generate scene 1 first.'); return; }
+    posterCanvas.toBlob((blob) => {
+      if (!blob) return;
+      const a = document.createElement('a');
+      const titleText = (typeof window.script !== 'undefined' && window.script?.mainTitle) || 'darkpsycho-poster';
+      const safeName = titleText.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'darkpsycho-poster';
+      a.download = `${safeName}-poster.png`;
+      a.href = URL.createObjectURL(blob);
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }, 'image/png');
+  }
+
+  function install() {
+    if (!ensureCanvas()) return;
+
+    // Style buttons
+    document.querySelectorAll('.poster-style-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.poster-style-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentStyle = btn.dataset.style;
+        renderPoster();
+      });
+    });
+
+    // Position buttons
+    document.querySelectorAll('.poster-pos-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.poster-pos-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentPosition = btn.dataset.pos;
+        renderPoster();
+      });
+    });
+
+    // Background source dropdown
+    const src = $('posterSource');
+    if (src) src.addEventListener('change', () => {
+      currentBgSource = src.value;
+      renderPoster();
+    });
+
+    // Text source dropdown — auto-fills the textarea, then re-renders
+    const textSrc = $('posterTextSource');
+    const customEl = $('posterCustomText');
+    if (textSrc && customEl) {
+      textSrc.addEventListener('change', () => {
+        const v = textSrc.value;
+        if (v === 'title') {
+          customEl.value = ''; // don't override
+        } else if (v === 'custom') {
+          if (!customEl.value) customEl.value = '';
+          customEl.focus();
+        } else {
+          const m = /^scene-(\d+)$/.exec(v);
+          if (m) {
+            const idx = parseInt(m[1], 10) - 1;
+            customEl.value = getSceneText(idx);
+          }
+        }
+        renderPoster();
+      });
+      // Live re-render as the user edits the custom text
+      customEl.addEventListener('input', renderPoster);
+    }
+
+    // Toggles
+    $('posterShowBrand')?.addEventListener('change', renderPoster);
+    $('posterUppercase')?.addEventListener('change', renderPoster);
+    $('posterQuoteMarks')?.addEventListener('change', renderPoster);
+    // Re-render when title changes manually
+    $('mainTitle')?.addEventListener('input', renderPoster);
+    // Re-render when title font changes
+    $('titleFont')?.addEventListener('change', renderPoster);
+
+    // Buttons
+    $('posterRegenBtn')?.addEventListener('click', generateAIPoster);
+    $('posterDownloadBtn')?.addEventListener('click', downloadPoster);
+
+    // Watch for new scene images via mutation polling — simplest reliable method
+    let lastSceneCount = 0;
+    let lastImage0 = null;
+    setInterval(() => {
+      const sceneCount = (typeof window.script !== 'undefined' && window.script?.scenes?.length) || 0;
+      const img0 = (typeof window.images !== 'undefined' && Array.isArray(window.images)) ? window.images[0] : null;
+      if (sceneCount !== lastSceneCount) {
+        lastSceneCount = sceneCount;
+        refreshSourceDropdown();
+        refreshTextSourceDropdown();
+      }
+      if (img0 !== lastImage0) {
+        lastImage0 = img0;
+        renderPoster();
+      }
+    }, 1500);
+
+    // Initial paint
+    refreshSourceDropdown();
+    refreshTextSourceDropdown();
+    renderPoster();
+  }
+
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(install);
+  } else if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', install);
+  } else {
+    install();
+  }
+})();
 </script>
 </body>
 </html>
