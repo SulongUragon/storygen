@@ -1443,7 +1443,7 @@ function loadKeys() {
 async function generateScript(topic, sceneCount, apiKey) {
   const cartoonMode = document.getElementById('cartoonMode')?.checked;
   const cartoonInstruction = cartoonMode
-    ? "MIX IT UP — roughly half the scenes should feature expressive cartoon characters (people, animals, figures with faces and emotions showing the scene's theme); the rest can be object/scene-based minimalist sketches. For character scenes, describe the character's expression and pose vividly. For non-character scenes, describe a single concrete object or setting. Vary them so no two consecutive scenes are the same type."
+    ? "MIX IT UP — roughly half the scenes should feature expressive cartoon characters (HUMAN ONLY: men, women, or children — never animals, monsters, vampires, demons, or fantasy creatures); the rest can be object/scene-based minimalist sketches. For character scenes, describe the human character's expression and pose vividly. For non-character scenes, describe a single concrete object or setting. Vary them so no two consecutive scenes are the same type."
     : "Describe a single concrete subject (a person, a couple, a tree, an object) as a minimalist cartoon sketch illustration. Example: 'a young couple smiling and holding hands, cartoon line drawing'.";
   const prompt = `You are a viral content creator who makes dark-psychology storytelling videos (think TikTok / Reels / Shorts). Topic: "${topic}".
 
@@ -1522,7 +1522,7 @@ function getStylePrefix() {
 
 async function generateImageForScene(scenePrompt, apiKey, isCartoon = false) {
   const cartoonStyleAddition = isCartoon
-    ? 'Expressive cartoon character with exaggerated facial emotion, bold ink outlines, dynamic pose, vibrant personality. '
+    ? 'Expressive HUMAN cartoon character (man, woman, or child only), human face with exaggerated facial emotion, bold ink outlines, dynamic pose, vibrant personality. ONLY human people. NO monsters, NO vampires, NO demons, NO zombies, NO skeletons, NO aliens, NO animals, NO creatures, NO fantasy beings, NO supernatural entities. '
     : '';
   const body = {
     prompt: getStylePrefix() + cartoonStyleAddition + scenePrompt,
