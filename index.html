@@ -693,6 +693,20 @@
             <div class="toggle-track"></div>
           </label>
         </div>
+        <div id="cartoonStyleRow" style="margin-bottom:14px;">
+          <label style="display:block;font-size:10px;color:#666;text-transform:uppercase;letter-spacing:2px;font-weight:600;margin-bottom:6px;">🎨 Cartoon Style</label>
+          <select id="cartoonStyle" style="width:100%;background:#0d0d0d;color:#ccc;border:1px solid #2a2a2a;border-radius:6px;padding:7px 10px;font-size:11px;">
+            <option value="expressive">Expressive Cartoon (default)</option>
+            <option value="flat">Flat Design (minimalist, bold colors)</option>
+            <option value="anime80s">80s Anime (vintage Japanese)</option>
+            <option value="chibi">Chibi (cute, big head, tiny body)</option>
+            <option value="comic">Comic Book (superhero, halftone)</option>
+            <option value="watercolor">Watercolor (soft painted)</option>
+            <option value="pixar">3D Pixar-Style (rendered 3D)</option>
+            <option value="sketch">Sketch / Doodle (pencil drawn)</option>
+            <option value="retro">Retro 1950s Cartoon (Tom & Jerry era)</option>
+          </select>
+        </div>
         <button id="generateAllBtn" class="big-btn">⚡ Generate Everything</button>
 
         <!-- Cost Estimator -->
@@ -1531,10 +1545,26 @@ function getStylePrefix() {
   return mode === 'clean' ? STYLE_PREFIX_CLEAN : mode === 'colored' ? STYLE_PREFIX_COLORED : STYLE_PREFIX_BAKED;
 }
 
+const CARTOON_STYLE_PROMPTS = {
+  expressive: 'Expressive HUMAN cartoon character (man, woman, or child only), human face with exaggerated facial emotion, bold ink outlines, dynamic pose, vibrant personality, colorful expressive illustration. ',
+  flat: 'Flat design illustration of a human character (man, woman, or child only), minimalist style, bold solid colors, no outlines, geometric shapes, modern app icon aesthetic, clean vector look. ',
+  anime80s: '80s anime style human character (man, woman, or child only), vintage Japanese animation, large expressive eyes, dramatic shading, cel-shaded colors, retro pastel palette, emotional expression. ',
+  chibi: 'Chibi cartoon human character (man, woman, or child only), super-deformed proportions, oversized head, tiny body, cute round face, big sparkling eyes, adorable cheerful expression. ',
+  comic: 'American comic book style human character (man, woman, or child only), bold ink lines, halftone dot shading, superhero aesthetic, dramatic action pose, high contrast colors, dynamic panel composition. ',
+  watercolor: 'Watercolor illustration of a human character (man, woman, or child only), soft painted textures, loose expressive brushstrokes, pastel colors, bleeding edges, artistic hand-painted feel. ',
+  pixar: '3D rendered Pixar-style human character (man, woman, or child only), smooth subsurface scattering skin, expressive oversized eyes, cinematic lighting, vibrant saturated colors, warm friendly design. ',
+  sketch: 'Pencil sketch illustration of a human character (man, woman, or child only), rough hand-drawn lines, crosshatching shading, graphite texture, sketchbook style, loose expressive linework. ',
+  retro: '1950s retro cartoon human character (man, woman, or child only), vintage limited animation style, bold black outlines, restricted muted color palette, classic old cartoon proportions, nostalgic charm. ',
+};
+const CARTOON_STYLE_SUFFIX = 'ONLY human people. NO monsters, NO vampires, NO demons, NO zombies, NO skeletons, NO aliens, NO animals, NO creatures, NO fantasy beings, NO supernatural entities. ';
+
 async function generateImageForScene(scenePrompt, apiKey, isCartoon = false) {
-  const cartoonStyleAddition = isCartoon
-    ? 'Expressive HUMAN cartoon character (man, woman, or child only), human face with exaggerated facial emotion, bold ink outlines, dynamic pose, vibrant personality. ONLY human people. NO monsters, NO vampires, NO demons, NO zombies, NO skeletons, NO aliens, NO animals, NO creatures, NO fantasy beings, NO supernatural entities. '
-    : '';
+  let cartoonStyleAddition = '';
+  if (isCartoon) {
+    const styleKey = document.getElementById('cartoonStyle')?.value || 'expressive';
+    const stylePrompt = CARTOON_STYLE_PROMPTS[styleKey] || CARTOON_STYLE_PROMPTS.expressive;
+    cartoonStyleAddition = stylePrompt + CARTOON_STYLE_SUFFIX;
+  }
   const body = {
     prompt: getStylePrefix() + cartoonStyleAddition + scenePrompt,
     image_size: { width: 768, height: 1344 },
@@ -3963,6 +3993,16 @@ async function calGenerateAll() {
 
 // Wire up buttons
 document.addEventListener('DOMContentLoaded', () => {
+  // Show/hide cartoonStyleRow based on cartoonMode toggle
+  const cartoonModeEl = document.getElementById('cartoonMode');
+  const cartoonStyleRowEl = document.getElementById('cartoonStyleRow');
+  function syncCartoonStyleRow() {
+    if (cartoonStyleRowEl) {
+      cartoonStyleRowEl.style.display = cartoonModeEl?.checked ? 'block' : 'none';
+    }
+  }
+  syncCartoonStyleRow();
+  cartoonModeEl?.addEventListener('change', syncCartoonStyleRow);
   renderCalendar();
   const planBtn = document.getElementById('calPlanBtn');
   const genAllBtn = document.getElementById('calGenerateAllBtn');
