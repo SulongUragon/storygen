@@ -993,22 +993,17 @@
                 <option value="'Anton', sans-serif">Anton (condensed)</option>
                 <option value="'Archivo Black', sans-serif">Archivo Black</option>
                 <option value="'Montserrat', sans-serif">Montserrat 900</option>
-                <option value="'Special Elite', monospace">Special Elite (typewriter)</option>
-                <option value="'Permanent Marker', cursive">Permanent Marker</option>
-                <option value="'Kalam', cursive">Kalam (handwritten)</option>
-              </select>
-            </div>
-            <div class="field" id="typewriterFontStyleRow" style="display:none">
-              <label>Typewriter Style</label>
-              <select id="typewriterFontStyle">
-                <option value="'Special Elite', monospace" selected>Special Elite — Worn Keys</option>
-                <option value="'Courier New', Courier, monospace">Courier New — Classic</option>
+                <option value="'Special Elite', monospace">Special Elite — Worn Keys</option>
                 <option value="'Cutive Mono', monospace">Cutive Mono — Clean Mono</option>
                 <option value="'Share Tech Mono', monospace">Share Tech Mono — Tech Mono</option>
                 <option value="'VT323', monospace">VT323 — Pixel Terminal</option>
                 <option value="'Nixie One', monospace">Nixie One — Elegant Type</option>
+                <option value="'Courier New', Courier, monospace">Courier New — Classic</option>
+                <option value="'Permanent Marker', cursive">Permanent Marker</option>
+                <option value="'Kalam', cursive">Kalam (handwritten)</option>
               </select>
             </div>
+
             <div class="subs-row">
               <div class="field">
                 <label>Color</label>
@@ -1985,10 +1980,6 @@ function drawSubtitle(text, alpha) {
   const strokeColor = document.getElementById('subsStrokeColor')?.value || '#000000';
   const strokeWeight = parseInt(document.getElementById('subsStroke')?.value ?? 12);
   let fontFamily = document.getElementById('subsFont')?.value || "'Inter', sans-serif";
-  // If a typewriter font is selected in subsFont, use the typewriterFontStyle variant instead
-  if (fontFamily.includes('Special Elite') || fontFamily.includes('Courier')) {
-    fontFamily = document.getElementById('typewriterFontStyle')?.value || fontFamily;
-  }
   const isMono = fontFamily.includes('Special Elite') || fontFamily.includes('Courier') || fontFamily.includes('Cutive') || fontFamily.includes('Share Tech') || fontFamily.includes('VT323') || fontFamily.includes('Nixie') || fontFamily.includes('Kalam') || fontFamily.includes('Caveat') || fontFamily.includes('Marker');
   const weight = isMono ? 700 : 900;
   const subsCase = document.getElementById('subsCase')?.value || 'upper';
@@ -3129,15 +3120,7 @@ $('downloadBtn').onclick = async () => {
 [titleFontEl, titleColorEl, titlePosEl, captionColorEl, subsEnabledEl, subsWordsEl, subsColorEl, document.getElementById('zoomStyle')].forEach(el =>
   el.addEventListener('change', drawStaticPreview)
 );
-function updateTypewriterFontStyleVisibility() {
-  const subsFontEl = document.getElementById('subsFont');
-  const twRow = document.getElementById('typewriterFontStyleRow');
-  if (!subsFontEl || !twRow) return;
-  const isTypewriterFont = subsFontEl.value.includes('Special Elite') || subsFontEl.value.includes('Courier');
-  twRow.style.display = isTypewriterFont ? 'block' : 'none';
-}
-$('subsFont').addEventListener('change', () => { updateTypewriterFontStyleVisibility(); drawStaticPreview(); });
-$('typewriterFontStyle')?.addEventListener('change', drawStaticPreview);
+$('subsFont').addEventListener('change', drawStaticPreview);
 $('subsStyle').addEventListener('change', drawStaticPreview);
 // subsAllCaps replaced by subsCase dropdown
 $('subsOffset').addEventListener('input', () => {
@@ -3599,7 +3582,7 @@ function applySubsPreset(name) {
   const sp = document.getElementById('subsPosVal'); if (sp) sp.textContent = p.pos + '%';
   const spd = document.getElementById('subsPosDisplay'); if (spd) spd.textContent = p.pos + '%';
   const bo = document.getElementById('subsBgOptions'); if (bo) bo.style.display = p.bgEnabled ? 'grid' : 'none';
-  if (typeof updateTypewriterFontStyleVisibility === 'function') updateTypewriterFontStyleVisibility();
+
   const boVal = document.getElementById('subsBgOpacityVal'); if (boVal) boVal.textContent = p.bgOpacity + '%';
   // Active button
   document.querySelectorAll('.subs-preset-btn').forEach(b => b.classList.toggle('active', b.dataset.preset === name));
