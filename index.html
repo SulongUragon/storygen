@@ -605,9 +605,38 @@
           <div class="api-label">FAL.ai</div>
           <input type="password" id="falKey" placeholder="fal-… (FLUX images)" autocomplete="off">
         </div>
-        <div class="api-row">
-          <div class="api-label">ElevenLabs</div>
-          <input type="password" id="elevenKey" placeholder="xi-… (TTS)" autocomplete="off">
+        <!-- Voice Provider Selector -->
+        <div class="api-row" style="margin-bottom:10px;">
+          <div class="api-label">Voice Provider</div>
+          <select id="voiceProvider" style="width:100%;background:#080808;border:1px solid #252525;color:#e5e5e5;padding:11px 13px;border-radius:6px;font-family:inherit;font-size:14px;">
+            <option value="elevenlabs">ElevenLabs</option>
+            <option value="openai">OpenAI TTS</option>
+          </select>
+        </div>
+        <!-- ElevenLabs fields (shown when provider = elevenlabs) -->
+        <div id="elevenLabsKeyFields">
+          <div class="api-row">
+            <div class="api-label">ElevenLabs</div>
+            <input type="password" id="elevenKey" placeholder="xi-… (TTS)" autocomplete="off">
+          </div>
+        </div>
+        <!-- OpenAI TTS fields (shown when provider = openai) -->
+        <div id="openaiKeyFields" style="display:none;">
+          <div class="api-row">
+            <div class="api-label">OpenAI Key</div>
+            <input type="password" id="openaiKey" placeholder="sk-… (TTS)" autocomplete="off">
+          </div>
+          <div class="api-row" style="margin-top:8px;">
+            <div class="api-label">OpenAI Voice</div>
+            <select id="openaiVoice" style="width:100%;background:#080808;border:1px solid #252525;color:#e5e5e5;padding:11px 13px;border-radius:6px;font-family:inherit;font-size:14px;">
+              <option value="alloy">Alloy (neutral)</option>
+              <option value="echo">Echo (male)</option>
+              <option value="fable">Fable (British)</option>
+              <option value="onyx" selected>Onyx (deep male)</option>
+              <option value="nova">Nova (female)</option>
+              <option value="shimmer">Shimmer (soft female)</option>
+            </select>
+          </div>
         </div>
         <div style="border-top:1px solid #1e1e1e;margin-top:12px;padding-top:12px;">
           <div style="font-size:9px;color:#555;text-transform:uppercase;letter-spacing:2px;font-weight:700;margin-bottom:8px;">☁️ Auto-Schedule Setup</div>
@@ -681,7 +710,7 @@
               <option value="9">9</option>
             </select>
           </div>
-          <div class="field">
+          <div id="elevenVoiceConfigFields" class="field">
             <label>Voice</label>
             <select id="voice">
               <option value="yBtWe2ymKT0oXUmsi6st" selected>My Voice (Sulong)</option>
@@ -693,7 +722,7 @@
               <option value="EXAVITQu4vr4xnSDxMaL">Bella (soft)</option>
             </select>
           </div>
-          <div class="field">
+          <div id="elevenModelConfigField" class="field">
             <label>ElevenLabs Model</label>
             <select id="elevenModel">
               <option value="eleven_v3" selected>v3 — Best quality (latest)</option>
@@ -1465,11 +1494,33 @@ function setProgress(pct) {
   progressBar.style.width = Math.max(0, Math.min(100, pct)) + '%';
 }
 
+// ----- Voice provider UI toggle
+function applyVoiceProviderUI(provider) {
+  const isOpenAI = provider === 'openai';
+  const elFields = $('elevenLabsKeyFields');
+  const oaFields = $('openaiKeyFields');
+  const elVoiceConfig = $('elevenVoiceConfigFields');
+  const elModelConfig = $('elevenModelConfigField');
+  if (elFields) elFields.style.display = isOpenAI ? 'none' : '';
+  if (oaFields) oaFields.style.display = isOpenAI ? '' : 'none';
+  if (elVoiceConfig) elVoiceConfig.style.display = isOpenAI ? 'none' : '';
+  if (elModelConfig) elModelConfig.style.display = isOpenAI ? 'none' : '';
+  localStorage.setItem('voice_provider', provider);
+}
+
+$('voiceProvider')?.addEventListener('change', function() {
+  applyVoiceProviderUI(this.value);
+  localStorage.setItem('openai_voice', $('openaiVoice')?.value || 'onyx');
+});
+
 // ----- Save keys
 $('saveKeys').onclick = () => {
   localStorage.setItem('anthropic_api_key', anthropicKeyEl.value.trim());
   localStorage.setItem('fal_api_key', falKeyEl.value.trim());
   localStorage.setItem('elevenlabs_api_key', elevenKeyEl.value.trim());
+  localStorage.setItem('openai_api_key', $('openaiKey')?.value.trim() || '');
+  localStorage.setItem('voice_provider', $('voiceProvider')?.value || 'elevenlabs');
+  localStorage.setItem('openai_voice', $('openaiVoice')?.value || 'onyx');
   localStorage.setItem('cloudinary_cloud', document.getElementById('cloudinaryCloud')?.value.trim() || '');
   localStorage.setItem('make_webhook', document.getElementById('makeWebhook')?.value.trim() || '');
   localStorage.setItem('cloudinary_preset', document.getElementById('cloudinaryPreset')?.value.trim() || '');
@@ -1482,6 +1533,9 @@ function loadKeys() {
   anthropicKeyEl.value = localStorage.getItem('anthropic_api_key') || '';
   falKeyEl.value = localStorage.getItem('fal_api_key') || '';
   elevenKeyEl.value = localStorage.getItem('elevenlabs_api_key') || '';
+  const _oKey = localStorage.getItem('openai_api_key'); if (_oKey && $('openaiKey')) $('openaiKey').value = _oKey;
+  const _vp = localStorage.getItem('voice_provider'); if (_vp && $('voiceProvider')) { $('voiceProvider').value = _vp; applyVoiceProviderUI(_vp); }
+  const _ov = localStorage.getItem('openai_voice'); if (_ov && $('openaiVoice')) $('openaiVoice').value = _ov;
   const mwEl = document.getElementById('makeWebhook'); if (mwEl && !mwEl.value) mwEl.value = localStorage.getItem('make_webhook') || 'https://hook.us2.make.com/vz7tdtaf6l8h1jx3q1ivt4s9qglrutle';
   const ccEl = document.getElementById('cloudinaryCloud'); if (ccEl) ccEl.value = localStorage.getItem('cloudinary_cloud') || '';
   const cpEl = document.getElementById('cloudinaryPreset'); if (cpEl) cpEl.value = localStorage.getItem('cloudinary_preset') || '';
@@ -1696,7 +1750,7 @@ function showVoiceQuotaWarning(status) {
   console.warn('ElevenLabs quota/auth error (' + status + ') — voice generation skipped');
 }
 
-async function generateSpeech(text, voiceId, apiKey, audioCtx) {
+async function generateSpeechElevenLabs(text, voiceId, apiKey, audioCtx) {
   const body = {
     text: text,
     model_id: (document.getElementById('elevenModel')?.value || 'eleven_turbo_v2_5'),
@@ -1737,6 +1791,45 @@ async function generateSpeech(text, voiceId, apiKey, audioCtx) {
   const audioBuf = await audioCtx.decodeAudioData(arrayBuf.slice(0));
   const wt = buildWordTimings(data.alignment || data.normalized_alignment);
   return { audioBuffer: audioBuf, mp3Buffer: arrayBuf, wordTimings: wt };
+}
+
+async function generateSpeechOpenAI(text, apiKey, audioCtx) {
+  const voiceVal = document.getElementById('openaiVoice')?.value || 'onyx';
+  const response = await fetch('https://api.openai.com/v1/audio/speech', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'tts-1',
+      input: text,
+      voice: voiceVal,
+      response_format: 'mp3'
+    })
+  });
+  if (!response.ok) {
+    let detail = '';
+    try { const j = await response.json(); detail = j.error?.message || ''; } catch (e) {}
+    if (response.status === 401 || response.status === 429) {
+      showVoiceQuotaWarning(response.status);
+      return null;
+    }
+    throw new Error(`OpenAI TTS ${response.status}: ${detail || response.statusText}`);
+  }
+  const arrayBuf = await response.arrayBuffer();
+  const audioBuf = await audioCtx.decodeAudioData(arrayBuf.slice(0));
+  // OpenAI TTS has no word-level timestamps — subtitle sync uses char-weighted fallback (wordTimings = null)
+  return { audioBuffer: audioBuf, mp3Buffer: arrayBuf, wordTimings: null };
+}
+
+async function generateSpeech(text, voiceId, apiKey, audioCtx) {
+  const provider = document.getElementById('voiceProvider')?.value || 'elevenlabs';
+  if (provider === 'openai') {
+    const oKey = document.getElementById('openaiKey')?.value.trim() || '';
+    return generateSpeechOpenAI(text, oKey, audioCtx);
+  }
+  return generateSpeechElevenLabs(text, voiceId, apiKey, audioCtx);
 }
 
 // =========================================================
@@ -2345,8 +2438,12 @@ async function runGenerateAll() {
   const anthropicKey = anthropicKeyEl.value.trim();
   const falKey = falKeyEl.value.trim();
   const elevenKey = elevenKeyEl.value.trim();
-  if (!anthropicKey || !falKey || !elevenKey) {
-    setStatus('Need all 3 API keys (Anthropic, FAL.ai, ElevenLabs)', 'error');
+  const _provider = document.getElementById('voiceProvider')?.value || 'elevenlabs';
+  const _oKey = document.getElementById('openaiKey')?.value.trim() || '';
+  const _voiceKeyOk = _provider === 'openai' ? !!_oKey : !!elevenKey;
+  if (!anthropicKey || !falKey || !_voiceKeyOk) {
+    const _missing = _provider === 'openai' ? 'OpenAI' : 'ElevenLabs';
+    setStatus(`Need all 3 API keys (Anthropic, FAL.ai, ${_missing})`, 'error');
     return;
   }
   const topic = topicEl.value.trim();
@@ -2430,8 +2527,9 @@ async function runGenerateAll() {
       } else {
         let audioBuffer = r.audioBuffer;
         let wt = r.wordTimings || null;
-        // Apply silence removal if enabled
-        if (document.getElementById('silenceRemoveEnabled')?.checked) {
+        // Apply silence removal if enabled (ElevenLabs only — OpenAI TTS doesn't need it)
+        const _currProvider = document.getElementById('voiceProvider')?.value || 'elevenlabs';
+        if (_currProvider === 'elevenlabs' && document.getElementById('silenceRemoveEnabled')?.checked) {
           const thresh = parseInt(document.getElementById('silenceThresh')?.value || 2);
           const minSil = parseInt(document.getElementById('silenceMin')?.value || 15) / 100;
           const { buffer: trimmed, timeMap } = removeSilenceFromBuffer(audioBuffer, thresh, minSil);
@@ -2647,8 +2745,11 @@ async function regenerateOneImage(idx) {
 
 async function regenerateVoice() {
   if (!script) { setStatus('Generate a script first', 'error'); return; }
-  const key = elevenKeyEl.value.trim();
-  if (!key) { setStatus('Need ElevenLabs key', 'error'); return; }
+  const _regenProvider = document.getElementById('voiceProvider')?.value || 'elevenlabs';
+  const key = _regenProvider === 'openai'
+    ? (document.getElementById('openaiKey')?.value.trim() || '')
+    : elevenKeyEl.value.trim();
+  if (!key) { setStatus(_regenProvider === 'openai' ? 'Need OpenAI key' : 'Need ElevenLabs key', 'error'); return; }
   disableControls(true);
   try {
     setStatus('Regenerating voiceovers…', 'info');
@@ -4649,6 +4750,9 @@ function getAllKeys() {
     anthropic: document.getElementById('anthropicKey')?.value || localStorage.getItem('anthropic_api_key') || '',
     fal: document.getElementById('falKey')?.value || localStorage.getItem('fal_api_key') || '',
     eleven: document.getElementById('elevenKey')?.value || localStorage.getItem('elevenlabs_api_key') || '',
+    openai: document.getElementById('openaiKey')?.value || localStorage.getItem('openai_api_key') || '',
+    voiceProvider: document.getElementById('voiceProvider')?.value || localStorage.getItem('voice_provider') || 'elevenlabs',
+    openaiVoice: document.getElementById('openaiVoice')?.value || localStorage.getItem('openai_voice') || 'onyx',
     cloudName: document.getElementById('cloudinaryCloud')?.value || localStorage.getItem('cloudinary_cloud') || '',
     cloudPreset: document.getElementById('cloudinaryPreset')?.value || localStorage.getItem('cloudinary_preset') || '',
     ayrshare: document.getElementById('ayrshareKey')?.value || localStorage.getItem('ayrshare_key') || '',
@@ -4661,6 +4765,9 @@ function applyKeys(keys) {
   set('anthropicKey', keys.anthropic);
   set('falKey', keys.fal);
   set('elevenKey', keys.eleven);
+  set('openaiKey', keys.openai);
+  if (keys.voiceProvider && $('voiceProvider')) { $('voiceProvider').value = keys.voiceProvider; applyVoiceProviderUI(keys.voiceProvider); }
+  if (keys.openaiVoice) set('openaiVoice', keys.openaiVoice);
   set('cloudinaryCloud', keys.cloudName);
   set('cloudinaryPreset', keys.cloudPreset);
   set('ayrshareKey', keys.ayrshare);
@@ -4669,6 +4776,9 @@ function applyKeys(keys) {
   if (keys.anthropic) localStorage.setItem('anthropic_api_key', keys.anthropic);
   if (keys.fal) localStorage.setItem('fal_api_key', keys.fal);
   if (keys.eleven) localStorage.setItem('elevenlabs_api_key', keys.eleven);
+  if (keys.openai) localStorage.setItem('openai_api_key', keys.openai);
+  if (keys.voiceProvider) localStorage.setItem('voice_provider', keys.voiceProvider);
+  if (keys.openaiVoice) localStorage.setItem('openai_voice', keys.openaiVoice);
   if (keys.cloudName) localStorage.setItem('cloudinary_cloud', keys.cloudName);
   if (keys.cloudPreset) localStorage.setItem('cloudinary_preset', keys.cloudPreset);
   if (keys.ayrshare) localStorage.setItem('ayrshare_key', keys.ayrshare);
