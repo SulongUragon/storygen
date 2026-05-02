@@ -911,6 +911,8 @@
             <select id="bgVariant">
               <optgroup label="Dark">
                 <option value="concrete" selected>Gray Concrete (default)</option>
+                <option value="darkConcrete">Dark Concrete (Mind Psych style)</option>
+                <option value="grunge">Grunge / Worn</option>
                 <option value="blood">Blood Red (dark)</option>
                 <option value="bloodLight">Blood Red (lighter)</option>
                 <option value="bloodWine">Wine / Burgundy</option>
@@ -923,6 +925,7 @@
                 <option value="paperWarm">Paper Warm Yellow</option>
                 <option value="paperCool">Paper Cool Blue + Hexagons</option>
                 <option value="paperPink">Paper Pink</option>
+                <option value="oldpaper">Old Paper (vintage)</option>
               </optgroup>
             </select>
           </div>
@@ -1409,7 +1412,10 @@ const BG_PALETTES = {
   paperLight: { stops: ['#f8f7f3', '#f0eee8', '#e6e2d8'], grainAmount: 8, splotchAlpha: 0.025, vignette: 0.12, hexOverlay: true,  darkSplotch: true },
   paperWarm:  { stops: ['#fdf6e3', '#f5ecc8', '#e9dca0'], grainAmount: 8, splotchAlpha: 0.025, vignette: 0.12, darkSplotch: true },
   paperCool:  { stops: ['#eef4f8', '#e0e9ef', '#cfd8de'], grainAmount: 8, splotchAlpha: 0.025, vignette: 0.12, hexOverlay: true,  darkSplotch: true },
-  paperPink:  { stops: ['#fce8ee', '#f5d4dc', '#e9bcc6'], grainAmount: 8, splotchAlpha: 0.025, vignette: 0.12, darkSplotch: true }
+  paperPink:  { stops: ['#fce8ee', '#f5d4dc', '#e9bcc6'], grainAmount: 8, splotchAlpha: 0.025, vignette: 0.12, darkSplotch: true },
+  darkConcrete: { customDraw: 'darkConcrete' },
+  grunge:       { customDraw: 'grunge' },
+  oldpaper:     { customDraw: 'oldpaper' }
 };
 
 function shiftHex(hex, offset) {
@@ -1420,10 +1426,208 @@ function shiftHex(hex, offset) {
   return `rgb(${r},${g},${b})`;
 }
 
+function seededRand(seed) {
+  let s = seed >>> 0;
+  return function() {
+    s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+    return s / 0x100000000;
+  };
+}
+
+function drawDarkConcrete(c, W, H, brightness) {
+  // Dark concrete inspired by Mind Psychology style: #2a2a2a base, gritty, uneven tone
+  const rand = seededRand(42);
+  const base = Math.max(0, Math.min(255, 42 + brightness));
+  // Fill base
+  const grad = c.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0,   `rgb(${base+14},${base+14},${base+14})`);
+  grad.addColorStop(0.45,`rgb(${base+6},${base+6},${base+6})`);
+  grad.addColorStop(1,   `rgb(${Math.max(0,base-6)},${Math.max(0,base-6)},${Math.max(0,base-6)})`);
+  c.fillStyle = grad;
+  c.fillRect(0, 0, W, H);
+  // Pixel grain (seeded)
+  const imgData = c.getImageData(0, 0, W, H);
+  const d = imgData.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const n = (rand() - 0.5) * 34;
+    d[i]   = Math.max(0, Math.min(255, d[i]   + n));
+    d[i+1] = Math.max(0, Math.min(255, d[i+1] + n));
+    d[i+2] = Math.max(0, Math.min(255, d[i+2] + n * 0.85)); // slight brown tint
+  }
+  c.putImageData(imgData, 0, 0);
+  // Large tonal patches (uneven concrete tone)
+  for (let i = 0; i < 55; i++) {
+    const x = rand() * W;
+    const y = rand() * H;
+    const r = 60 + rand() * 160;
+    const lightOrDark = rand() > 0.5 ? 1 : 0;
+    const a = 0.02 + rand() * 0.055;
+    const rg = c.createRadialGradient(x, y, 0, x, y, r);
+    const col = lightOrDark
+      ? `rgba(160,150,140,${a})`   // warm gray highlight patch
+      : `rgba(10,8,6,${a})`;       // dark shadow patch
+    rg.addColorStop(0, col);
+    rg.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = rg;
+    c.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  // Fine horizontal streaks (cast concrete look)
+  c.save();
+  for (let i = 0; i < 28; i++) {
+    const y = rand() * H;
+    const h = 0.5 + rand() * 3;
+    const a = 0.015 + rand() * 0.04;
+    c.fillStyle = `rgba(${rand()>0.5?180:8},${rand()>0.5?165:6},${rand()>0.5?150:4},${a})`;
+    c.fillRect(0, y, W, h);
+  }
+  c.restore();
+  // Vignette
+  const vig = c.createRadialGradient(W/2, H/2, H*0.28, W/2, H/2, H*0.8);
+  vig.addColorStop(0, 'rgba(0,0,0,0)');
+  vig.addColorStop(1, 'rgba(0,0,0,0.55)');
+  c.fillStyle = vig;
+  c.fillRect(0, 0, W, H);
+}
+
+function drawGrunge(c, W, H, brightness) {
+  // Grunge/worn: very dark base, scratches, worn spots, dust particles
+  const rand = seededRand(137);
+  const base = Math.max(0, Math.min(255, 26 + brightness));
+  c.fillStyle = `rgb(${base},${base-2},${base-4})`;
+  c.fillRect(0, 0, W, H);
+  // Pixel grain (seeded, coarser)
+  const imgData = c.getImageData(0, 0, W, H);
+  const d = imgData.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const n = (rand() - 0.5) * 28;
+    d[i]   = Math.max(0, Math.min(255, d[i]   + n));
+    d[i+1] = Math.max(0, Math.min(255, d[i+1] + n));
+    d[i+2] = Math.max(0, Math.min(255, d[i+2] + n));
+  }
+  c.putImageData(imgData, 0, 0);
+  // Worn spots (low-opacity white/gray ellipses — aged scuffs)
+  for (let i = 0; i < 38; i++) {
+    const x = rand() * W;
+    const y = rand() * H;
+    const rx = 20 + rand() * 90;
+    const ry = 10 + rand() * 50;
+    const a = 0.015 + rand() * 0.04;
+    c.save();
+    c.translate(x, y);
+    c.rotate((rand() - 0.5) * Math.PI);
+    const eg = c.createRadialGradient(0, 0, 0, 0, 0, Math.max(rx, ry));
+    eg.addColorStop(0, `rgba(200,195,185,${a})`);
+    eg.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = eg;
+    c.scale(rx / Math.max(rx, ry), ry / Math.max(rx, ry));
+    c.beginPath();
+    c.arc(0, 0, Math.max(rx, ry), 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+  }
+  // Scratches — thin diagonal lines
+  c.save();
+  for (let i = 0; i < 45; i++) {
+    const x1 = rand() * W;
+    const y1 = rand() * H;
+    const len = 30 + rand() * 200;
+    const angle = (rand() - 0.5) * 0.6 + (rand() > 0.5 ? Math.PI/4 : -Math.PI/4);
+    const x2 = x1 + Math.cos(angle) * len;
+    const y2 = y1 + Math.sin(angle) * len;
+    const a = 0.06 + rand() * 0.12;
+    c.strokeStyle = `rgba(210,205,195,${a})`;
+    c.lineWidth = 0.4 + rand() * 0.8;
+    c.beginPath();
+    c.moveTo(x1, y1);
+    c.lineTo(x2, y2);
+    c.stroke();
+  }
+  c.restore();
+  // Dust particles (tiny dots)
+  for (let i = 0; i < 120; i++) {
+    const x = rand() * W;
+    const y = rand() * H;
+    const r = 0.5 + rand() * 1.5;
+    const a = 0.04 + rand() * 0.12;
+    c.fillStyle = `rgba(190,185,175,${a})`;
+    c.beginPath();
+    c.arc(x, y, r, 0, Math.PI * 2);
+    c.fill();
+  }
+  // Edge burn / heavy vignette
+  const vig = c.createRadialGradient(W/2, H/2, H*0.2, W/2, H/2, H*0.85);
+  vig.addColorStop(0, 'rgba(0,0,0,0)');
+  vig.addColorStop(1, 'rgba(0,0,0,0.7)');
+  c.fillStyle = vig;
+  c.fillRect(0, 0, W, H);
+}
+
+function drawOldPaper(c, W, H, brightness) {
+  // Old paper: warm beige base, subtle noise, aged spots, vignette
+  const rand = seededRand(256);
+  const bOff = brightness;
+  const r0 = Math.max(0, Math.min(255, 232 + bOff));
+  const g0 = Math.max(0, Math.min(255, 220 + bOff));
+  const b0 = Math.max(0, Math.min(255, 200 + bOff));
+  // Warm gradient base
+  const grad = c.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0,   `rgb(${r0},${g0},${b0})`);
+  grad.addColorStop(0.5, `rgb(${r0-8},${g0-8},${b0-10})`);
+  grad.addColorStop(1,   `rgb(${r0-14},${g0-14},${b0-16})`);
+  c.fillStyle = grad;
+  c.fillRect(0, 0, W, H);
+  // Fine paper grain (seeded)
+  const imgData = c.getImageData(0, 0, W, H);
+  const d = imgData.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const n = (rand() - 0.5) * 12;
+    d[i]   = Math.max(0, Math.min(255, d[i]   + n));
+    d[i+1] = Math.max(0, Math.min(255, d[i+1] + n * 0.9));
+    d[i+2] = Math.max(0, Math.min(255, d[i+2] + n * 0.7));
+  }
+  c.putImageData(imgData, 0, 0);
+  // Aged spots / foxing (brown dots/blotches)
+  for (let i = 0; i < 60; i++) {
+    const x = rand() * W;
+    const y = rand() * H;
+    const r = 3 + rand() * 30;
+    const a = 0.03 + rand() * 0.09;
+    const rg = c.createRadialGradient(x, y, 0, x, y, r);
+    rg.addColorStop(0, `rgba(110,75,30,${a})`);
+    rg.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = rg;
+    c.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  // Subtle horizontal fiber lines
+  for (let i = 0; i < 20; i++) {
+    const y = rand() * H;
+    const a = 0.01 + rand() * 0.025;
+    c.fillStyle = `rgba(130,100,60,${a})`;
+    c.fillRect(0, y, W, 0.5 + rand() * 1.5);
+  }
+  // Vignette (darker edges = aged paper)
+  const vig = c.createRadialGradient(W/2, H/2, H*0.3, W/2, H/2, H*0.72);
+  vig.addColorStop(0, 'rgba(0,0,0,0)');
+  vig.addColorStop(1, 'rgba(80,50,20,0.28)');
+  c.fillStyle = vig;
+  c.fillRect(0, 0, W, H);
+}
+
 function buildConcrete(variant) {
   const key = variant || (document.getElementById('bgVariant')?.value) || 'concrete';
   const palette = BG_PALETTES[key] || BG_PALETTES.concrete;
   const brightness = parseInt(document.getElementById('bgBrightness')?.value || '0');
+  // Custom texture variants (seeded PRNG, unique draw routines)
+  if (palette.customDraw) {
+    const off = document.createElement('canvas');
+    off.width = W; off.height = H;
+    const c = off.getContext('2d');
+    if (palette.customDraw === 'darkConcrete') drawDarkConcrete(c, W, H, brightness);
+    else if (palette.customDraw === 'grunge')   drawGrunge(c, W, H, brightness);
+    else if (palette.customDraw === 'oldpaper') drawOldPaper(c, W, H, brightness);
+    concreteBg = off;
+    return;
+  }
   const stops = palette.stops.map(s => shiftHex(s, brightness));
   const off = document.createElement('canvas');
   off.width = W; off.height = H;
