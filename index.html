@@ -3027,8 +3027,13 @@ function playAudioSequence(audioCtx, recordDest) {
     src.buffer = audios[i];
     if (recordDest) src.connect(recordDest);
     if (isMobileRecording) {
-      // Mobile recording: monitor via direct output, no MediaStream in the loop
-      src.connect(audioCtx.destination);
+      // iOS/Android recording: intentionally do NOT connect to audioCtx.destination.
+      // Previous attempts routed audio to both recordDest AND speakers, which caused
+      // iOS to re-capture the live speaker output through its audio session and feed
+      // it back into the MediaRecorder stream — creating doubled/overlapping audio in
+      // the exported video on TikTok and CapCut. By routing ONLY to recordDest here,
+      // the user hears nothing during recording on iOS (acceptable trade-off), but the
+      // recorded file contains exactly one clean audio track with no feedback loop.
     } else {
       src.connect(monitorDest);
     }
@@ -3119,6 +3124,13 @@ async function runPlayback(record) {
     // silently add extra tracks; two audio tracks cause doubled audio on TikTok.
     const _vTracks = canvasStream.getVideoTracks();
     const _aTracks = canvasStream.getAudioTracks();
+    if (_aTracks.length > 1) {
+      console.warn(
+        `[DARK PSYCHO] MediaRecorder stream has ${_aTracks.length} audio tracks — ` +
+        'expected exactly 1. Only the first track will be used. ' +
+        'Extra tracks would cause doubled audio on TikTok/CapCut.'
+      );
+    }
     const _safeStream = new MediaStream([..._vTracks, ...(_aTracks.length > 0 ? [_aTracks[0]] : [])]);
     recorder = new MediaRecorder(_safeStream, { mimeType, videoBitsPerSecond: 6_000_000 });
     recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
