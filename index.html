@@ -1093,6 +1093,50 @@
             <label>Background brightness (<span id="bgBrightnessVal">0</span>) · lighten / darken any texture</label>
             <input type="range" id="bgBrightness" min="-150" max="200" value="0">
           </div>
+
+          <!-- ═══════════════ B-ROLL VIDEO OVERLAY ═══════════════ -->
+          <div class="field" style="border:1px solid #2a1a1a;border-radius:8px;padding:12px;background:#0d0808;margin-bottom:2px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+              <div>
+                <div style="font-size:11px;font-weight:700;color:#e57373;text-transform:uppercase;letter-spacing:2px;">🎬 B-roll Video</div>
+                <div style="font-size:10px;color:#555;margin-top:2px;">Plays under all content as a semi-transparent layer</div>
+              </div>
+            </div>
+
+            <!-- File picker row -->
+            <label for="brollFile" id="brollFileLabel" style="display:flex;align-items:center;gap:8px;cursor:pointer;background:#161616;border:1px dashed #333;border-radius:6px;padding:10px 12px;color:#777;font-size:12px;font-weight:500;transition:border-color 0.2s;" onmouseover="this.style.borderColor='#e53935'" onmouseout="this.style.borderColor='#333'">
+              <span style="font-size:18px;">📁</span>
+              <span id="brollFileName">Upload MP4 / MOV clip…</span>
+            </label>
+            <input type="file" id="brollFile" accept="video/mp4,video/quicktime,video/*" style="display:none;">
+
+            <!-- Tiny thumbnail preview -->
+            <div id="brollPreviewWrap" style="display:none;margin-top:8px;position:relative;">
+              <video id="brollThumb" style="width:100%;border-radius:5px;max-height:80px;object-fit:cover;background:#000;" muted playsinline loop></video>
+              <div style="position:absolute;top:4px;right:4px;">
+                <button id="brollRemoveBtn" style="background:rgba(229,57,53,0.9);color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:10px;cursor:pointer;font-weight:700;">✕ Remove</button>
+              </div>
+            </div>
+
+            <!-- Opacity -->
+            <div style="margin-top:10px;">
+              <label style="display:block;font-size:10px;color:#666;text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:4px;">Opacity · <span id="brollOpacityVal">40</span>%</label>
+              <input type="range" id="brollOpacity" min="0" max="100" value="40" style="width:100%;">
+            </div>
+
+            <!-- Position -->
+            <div style="margin-top:10px;">
+              <label style="display:block;font-size:10px;color:#666;text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:4px;">Position</label>
+              <select id="brollPosition" style="width:100%;background:#080808;border:1px solid #252525;color:#e5e5e5;padding:8px 10px;border-radius:6px;font-family:inherit;font-size:12px;">
+                <option value="full">Full Screen</option>
+                <option value="top">Top Half</option>
+                <option value="bottom">Bottom Half</option>
+                <option value="center">Center Crop (fill)</option>
+              </select>
+            </div>
+          </div>
+          <!-- ════════════════════════════════════════════════════ -->
+
           <div class="field">
             <label>Illustration mode</label>
             <select id="illMode">
@@ -2682,9 +2726,36 @@ function drawHighlightSubtitle(words, spokenCount, alpha) {
   ctx.restore();
 }
 
+// ── B-roll video overlay ──────────────────────────────────────────────────────
+function drawBroll() {
+  const bvid = document.getElementById('brollVideo');
+  if (!window.brollLoaded || !bvid || bvid.readyState < 2) return;
+  const opacity = (parseInt(document.getElementById('brollOpacity')?.value) || 40) / 100;
+  const pos = document.getElementById('brollPosition')?.value || 'full';
+  ctx.save();
+  ctx.globalAlpha = opacity;
+  if (pos === 'full') {
+    ctx.drawImage(bvid, 0, 0, W, H);
+  } else if (pos === 'top') {
+    ctx.drawImage(bvid, 0, 0, W, H / 2);
+  } else if (pos === 'bottom') {
+    ctx.drawImage(bvid, 0, H / 2, W, H / 2);
+  } else if (pos === 'center') {
+    const vAspect = bvid.videoWidth / (bvid.videoHeight || 1);
+    const cAspect = W / H;
+    let sx = 0, sy = 0, sw = bvid.videoWidth, sh = bvid.videoHeight;
+    if (vAspect > cAspect) { sw = sh * cAspect; sx = (bvid.videoWidth - sw) / 2; }
+    else { sh = sw / cAspect; sy = (bvid.videoHeight - sh) / 2; }
+    ctx.drawImage(bvid, sx, sy, sw, sh, 0, 0, W, H);
+  }
+  ctx.restore();
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function drawScene(sceneIdx, tInScene, sceneDuration) {
   if (contentMode === 'quotes') { drawQuoteScene(sceneIdx, tInScene, sceneDuration); return; }
   drawConcrete();
+  drawBroll();
   if (!script || !script.scenes[sceneIdx]) return;
   const scene = script.scenes[sceneIdx];
   const img = images[sceneIdx];
@@ -2753,6 +2824,7 @@ function drawStaticPreview() {
   if (contentMode === 'quotes' && script) { drawQuoteScene(previewScene, 0.5, 4); return; }
   if (!script) {
     drawConcrete();
+    drawBroll();
     ctx.save();
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
     ctx.font = `700 28px 'Inter', sans-serif`;
@@ -3520,6 +3592,11 @@ async function runPlayback(record) {
   // (CapCut, TikTok) would interpret as "audio overlap" after their downmix.
   const { sources, monitorEl } = playAudioSequence(audioCtx, audioRecordTarget);
   if (record) recorder.start(100);
+  // Start B-roll video so it's live during recording/preview
+  if (window.brollLoaded) {
+    const bv = document.getElementById('brollVideo');
+    if (bv) { bv.currentTime = 0; bv.play().catch(() => {}); }
+  }
   const start = performance.now();
 
   await new Promise(resolve => {
@@ -3560,6 +3637,12 @@ async function runPlayback(record) {
     setStatus(`Done · ${(currentBlob.size / 1024 / 1024).toFixed(1)} MB · ${ext.toUpperCase()}`, 'success');
   } else {
     setStatus('');
+  }
+
+  // Pause B-roll after playback ends
+  if (window.brollLoaded) {
+    const bv = document.getElementById('brollVideo');
+    if (bv) { try { bv.pause(); } catch (e) {} }
   }
 
   // Cleanup audio sources + monitor element
@@ -3603,6 +3686,87 @@ $('regenVoiceBtn').onclick = regenerateVoice;
 $('previewBtn').onclick = () => runPlayback(false);
 $('recordBtn').onclick = () => runPlayback(true);
 $('stopBtn').onclick = () => { if (playAbort) playAbort.cancel = true; };
+
+// =========================================================
+//  B-ROLL VIDEO OVERLAY
+// =========================================================
+window.brollLoaded = false;
+let brollObjectURL = null;
+
+document.getElementById('brollFile')?.addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  // Revoke previous object URL to free memory
+  if (brollObjectURL) { URL.revokeObjectURL(brollObjectURL); brollObjectURL = null; }
+  window.brollLoaded = false;
+
+  brollObjectURL = URL.createObjectURL(file);
+
+  // Remove any existing hidden video element
+  const existing = document.getElementById('brollVideo');
+  if (existing) existing.remove();
+
+  const bvid = document.createElement('video');
+  bvid.id = 'brollVideo';
+  bvid.src = brollObjectURL;
+  bvid.loop = true;
+  bvid.muted = true;
+  bvid.playsInline = true;
+  bvid.style.display = 'none';
+  bvid.crossOrigin = 'anonymous';
+  document.body.appendChild(bvid);
+
+  // Update thumbnail preview
+  const thumb = document.getElementById('brollThumb');
+  if (thumb) { thumb.src = brollObjectURL; }
+
+  bvid.addEventListener('loadeddata', () => {
+    window.brollLoaded = true;
+    // Refresh static preview
+    drawStaticPreview();
+  }, { once: true });
+
+  // Update label text
+  const label = document.getElementById('brollFileName');
+  if (label) label.textContent = file.name;
+
+  // Show preview wrap
+  const wrap = document.getElementById('brollPreviewWrap');
+  if (wrap) wrap.style.display = 'block';
+
+  // Ensure opacity label wired
+  const opSlider = document.getElementById('brollOpacity');
+  if (opSlider) opSlider.dispatchEvent(new Event('input'));
+});
+
+// Opacity slider live-update label
+document.getElementById('brollOpacity')?.addEventListener('input', function() {
+  const v = document.getElementById('brollOpacityVal');
+  if (v) v.textContent = this.value;
+  drawStaticPreview();
+});
+
+// Position dropdown live refresh
+document.getElementById('brollPosition')?.addEventListener('change', drawStaticPreview);
+
+// Remove button
+document.getElementById('brollRemoveBtn')?.addEventListener('click', function() {
+  window.brollLoaded = false;
+  const bvid = document.getElementById('brollVideo');
+  if (bvid) { try { bvid.pause(); } catch(e){} bvid.remove(); }
+  if (brollObjectURL) { URL.revokeObjectURL(brollObjectURL); brollObjectURL = null; }
+  const fileInput = document.getElementById('brollFile');
+  if (fileInput) fileInput.value = '';
+  const label = document.getElementById('brollFileName');
+  if (label) label.textContent = 'Upload MP4 / MOV clip…';
+  const wrap = document.getElementById('brollPreviewWrap');
+  if (wrap) wrap.style.display = 'none';
+  const thumb = document.getElementById('brollThumb');
+  if (thumb) thumb.src = '';
+  drawStaticPreview();
+});
+
 // =========================================================
 //  DOWNLOAD FOLDER (File System Access API + IndexedDB)
 // =========================================================
@@ -5651,6 +5815,7 @@ function drawQuoteScene(sceneIdx, tInScene, sceneDuration) {
   } else {
     drawAnimatedBg(t);
   }
+  drawBroll();
   if (!script || !script.scenes[sceneIdx]) return;
   const scene = script.scenes[sceneIdx];
   const fade = Math.min(1, tInScene / 0.4);
