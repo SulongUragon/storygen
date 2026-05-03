@@ -859,7 +859,7 @@
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
           <button class="cal-btn primary" id="modeListicle" onclick="setContentMode('listicle')">📋 Listicle<br><span style="font-size:8px;opacity:0.7">Stories + images</span></button>
           <button class="cal-btn" id="modeQuotes" onclick="setContentMode('quotes')">💬 Quotes<br><span style="font-size:8px;opacity:0.7">Text-only, no images</span></button>
-          <button class="cal-btn" id="modePoster" onclick="setContentMode('poster')">🎭 Episode Poster<br><span style="font-size:8px;opacity:0.7">4-quote card</span></button>
+          <button class="cal-btn" id="modePoster" onclick="setContentMode('poster')">🎭 Episode Poster<br><span style="font-size:8px;opacity:0.7">1 quote · 4 lines</span></button>
         </div>
         <div id="quoteBgRow" style="display:none;margin-bottom:14px;">
           <label style="display:block;font-size:10px;color:#666;text-transform:uppercase;letter-spacing:2px;font-weight:600;margin-bottom:6px;">Animated Background</label>
@@ -885,7 +885,7 @@
           <div class="row-2" style="margin-bottom:10px;">
             <div class="field" style="margin:0">
               <label>Background</label>
-              <select id="posterBgStyle" style="width:100%;background:#080808;border:1px solid #252525;color:#e5e5e5;padding:10px;border-radius:6px;font-family:inherit;font-size:13px;">
+              <select id="posterBgStyle" onchange="drawStaticPreview()" style="width:100%;background:#080808;border:1px solid #252525;color:#e5e5e5;padding:10px;border-radius:6px;font-family:inherit;font-size:13px;">
                 <option value="void">⬛ Void Black</option>
                 <option value="crimson" selected>🔴 Crimson Abyss</option>
                 <option value="matrix">💊 Matrix Green</option>
@@ -895,7 +895,7 @@
             </div>
             <div class="field" style="margin:0">
               <label>Quote Style</label>
-              <select id="posterQuoteStyle" style="width:100%;background:#080808;border:1px solid #252525;color:#e5e5e5;padding:10px;border-radius:6px;font-family:inherit;font-size:13px;">
+              <select id="posterQuoteStyle" onchange="drawStaticPreview()" style="width:100%;background:#080808;border:1px solid #252525;color:#e5e5e5;padding:10px;border-radius:6px;font-family:inherit;font-size:13px;">
                 <option value="upper" selected>UPPERCASE</option>
                 <option value="sentence">Sentence case</option>
                 <option value="lower">lowercase</option>
@@ -5838,117 +5838,93 @@ function drawPosterPlaceholder() {
   ctx.fillText('Enter a topic and click Generate', W/2, H/2 + 18);
   ctx.restore();
 }
-function drawEpisodePoster(quotes) {
+function drawEpisodePoster(lines) {
   const bgStyle = document.getElementById('posterBgStyle')?.value || 'crimson';
   const quoteStyle = document.getElementById('posterQuoteStyle')?.value || 'upper';
   const quoteFont = document.getElementById('titleFont')?.value || "'Montserrat', sans-serif";
 
   drawPosterBg(bgStyle);
-  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
   ctx.fillRect(0, 0, W, H);
 
   const accentColors = { void:'rgba(255,255,255,0.25)', crimson:'rgba(180,20,20,0.7)', matrix:'rgba(0,180,0,0.5)', smoke:'rgba(200,200,220,0.3)', navy:'rgba(50,100,255,0.5)' };
   const accentColor = accentColors[bgStyle] || 'rgba(255,255,255,0.25)';
 
-  const headerH = 80;
-  const headerGrd = ctx.createLinearGradient(0, 0, W, 0);
-  headerGrd.addColorStop(0, 'rgba(139,0,0,0.0)');
-  headerGrd.addColorStop(0.5, 'rgba(139,0,0,0.18)');
-  headerGrd.addColorStop(1, 'rgba(139,0,0,0.0)');
-  ctx.fillStyle = headerGrd;
-  ctx.fillRect(0, 0, W, headerH);
-
+  // ── Header ────────────────────────────────────────────────────────────────
   ctx.strokeStyle = accentColor;
-  ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(40, headerH - 2); ctx.lineTo(W - 40, headerH - 2); ctx.stroke();
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(40, 80); ctx.lineTo(W - 40, 80); ctx.stroke();
 
   ctx.save();
-  ctx.font = "900 28px 'Montserrat', sans-serif";
+  ctx.font = "900 22px 'Montserrat', sans-serif";
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = 'rgba(255,255,255,0.85)';
-  ctx.fillText('DARK PSYCHO', W/2, headerH / 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.letterSpacing = '6px';
+  ctx.fillText('DARK PSYCHO', W / 2, 52);
   ctx.restore();
 
-  const padX = 44;
-  const maxTextW = W - padX * 2;
-  const contentTop = headerH + 28;
-  const footerH = 60;
-  const contentH = H - contentTop - footerH;
-  let quoteFontSize = 54;
-  const labelFontSize = 26;
-  const labelH = labelFontSize * 1.5;
-  const sepH = 28;
-
-  function fmtQ(t, s) {
+  // ── Format lines ─────────────────────────────────────────────────────────
+  function fmt(t) {
     if (!t) return '';
-    if (s === 'upper') return t.toUpperCase();
-    if (s === 'lower') return t.toLowerCase();
-    return t.charAt(0).toUpperCase() + t.slice(1);
+    if (quoteStyle === 'upper') return t.toUpperCase();
+    if (quoteStyle === 'lower') return t.toLowerCase();
+    return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
   }
+  const formattedLines = (lines || []).slice(0, 4).map(fmt);
 
-  function measureTotalH(fontSize) {
+  // ── Auto-shrink font until all lines fit within 660px width ──────────────
+  let fontSize = 88;
+  ctx.font = "800 " + fontSize + "px " + quoteFont;
+  let fits = false;
+  while (fontSize > 32 && !fits) {
     ctx.font = "800 " + fontSize + "px " + quoteFont;
-    let total = 0;
-    for (let i = 0; i < 4; i++) {
-      const lines = wrapText(fmtQ(quotes[i], quoteStyle), maxTextW);
-      total += labelH + Math.min(lines.length, 3) * fontSize * 1.22 + 16;
-      if (i < 3) total += sepH;
-    }
-    return total;
+    fits = formattedLines.every(l => ctx.measureText(l).width <= 660);
+    if (!fits) fontSize -= 4;
   }
 
-  while (quoteFontSize > 30 && measureTotalH(quoteFontSize) > contentH * 0.96) { quoteFontSize -= 2; }
+  const lineHeight = fontSize * 1.35;
+  const totalBlockH = 4 * lineHeight;
+  const startY = (H - totalBlockH) / 2;
 
-  const actualH = measureTotalH(quoteFontSize);
-  let y = contentTop + (contentH - actualH) / 2;
-  const lineHeight = quoteFontSize * 1.22;
+  // ── Draw 4 lines centered ─────────────────────────────────────────────────
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.font = "800 " + fontSize + "px " + quoteFont;
 
-  for (let i = 0; i < 4; i++) {
-    const num = String(i + 1).padStart(2, '0');
-    ctx.save();
-    ctx.font = "700 " + labelFontSize + "px 'Inter', sans-serif";
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillStyle = 'rgba(255,255,255,0.28)';
-    ctx.fillText(num, padX, y);
-    ctx.restore();
-    y += labelH;
+  formattedLines.forEach((line, i) => {
+    const lineY = startY + i * lineHeight;
 
-    ctx.font = "800 " + quoteFontSize + "px " + quoteFont;
-    let lines = wrapText(fmtQ(quotes[i], quoteStyle), maxTextW);
-    if (lines.length > 3) lines = lines.slice(0, 3);
-
-    ctx.save();
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.strokeStyle = 'rgba(0,0,0,0.75)';
-    ctx.lineWidth = Math.max(5, quoteFontSize * 0.09);
-    ctx.lineJoin = 'round';
-    ctx.fillStyle = '#ffffff';
-    lines.forEach((line, li) => {
-      ctx.strokeText(line, padX, y + li * lineHeight);
-      ctx.fillText(line, padX, y + li * lineHeight);
-    });
-    ctx.restore();
-    y += lines.length * lineHeight + 16;
-
-    if (i < 3) {
+    // Thin separator above each line (except first)
+    if (i > 0) {
       ctx.save();
-      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+      ctx.strokeStyle = 'rgba(255,255,255,0.1)';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(padX, y + (sepH - 1) / 2);
-      ctx.lineTo(W - padX, y + (sepH - 1) / 2);
+      ctx.moveTo(60, lineY - lineHeight * 0.15);
+      ctx.lineTo(W - 60, lineY - lineHeight * 0.15);
       ctx.stroke();
       ctx.restore();
-      y += sepH;
     }
-  }
 
+    // Text stroke (outline for depth)
+    ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+    ctx.lineWidth = Math.max(6, fontSize * 0.1);
+    ctx.lineJoin = 'round';
+    ctx.strokeText(line, W / 2, lineY);
+
+    // Text fill
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(line, W / 2, lineY);
+  });
+  ctx.restore();
+
+  // ── Footer ────────────────────────────────────────────────────────────────
   ctx.strokeStyle = accentColor;
   ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(40, H - footerH + 2); ctx.lineTo(W - 40, H - footerH + 2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(40, 1200); ctx.lineTo(W - 40, 1200); ctx.stroke();
+
   drawLogoWatermark(0.6);
 }
 async function generatePoster() {
@@ -5962,21 +5938,22 @@ async function generatePoster() {
   const btn = document.getElementById('generatePosterBtn');
   const st = document.getElementById('posterGenStatus');
   if (btn) { btn.disabled=true; btn.textContent='⏳ Generating...'; }
-  if (st) { st.style.display='block'; st.style.background='#0f1525'; st.style.color='#8ba3ff'; st.style.border='1px solid #1a2340'; st.textContent='Calling Claude for brutal quotes...'; }
+  if (st) { st.style.display='block'; st.style.background='#0f1525'; st.style.color='#8ba3ff'; st.style.border='1px solid #1a2340'; st.textContent='Calling Claude for a brutal quote...'; }
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type':'application/json', 'x-api-key':apiKey, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true' },
-      body: JSON.stringify({ model:'claude-haiku-4-5-20251001', max_tokens:512, messages:[{ role:'user', content:'Generate exactly 4 brutal, gut-punch dark psychology quotes about "'+topic+'". Each must be under 12 words. Punchy. No explanation. No numbering. No em dashes, en dashes, or hyphens. Return ONLY a valid JSON array with exactly 4 strings: ["quote1","quote2","quote3","quote4"]' }] })
+      body: JSON.stringify({ model:'claude-haiku-4-5-20251001', max_tokens:256, messages:[{ role:'user', content:'Write one brutal dark psychology quote about "' + topic + '". The quote must be exactly 4 lines when broken for dramatic effect like a poem or movie title card. Each line should be SHORT (2-6 words max), punchy, and fragment naturally. No numbering. No em dashes or en dashes. No attribution. Return ONLY a valid JSON array of exactly 4 strings: ["line1","line2","line3","line4"]' }] })
     });
     if (!res.ok) throw new Error('API error ' + res.status);
     const data = await res.json();
-    let raw = data.content[0].text.trim().replace(/^```jsons*/i,'').replace(/^```s*/i,'').replace(/```$/,'').trim();
-    let quotes = JSON.parse(raw);
-    quotes = stripDashes(quotes);
-    window.posterQuotes = quotes;
-    if (st) { st.style.background='#102510'; st.style.color='#80ff99'; st.style.border='1px solid #1a401a'; st.textContent='✓ 4 quotes generated — canvas updated'; }
-    drawEpisodePoster(quotes);
+    let raw = data.content[0].text.trim().replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/```$/,'').trim();
+    let lines = JSON.parse(raw);
+    if (!Array.isArray(lines) || lines.length !== 4) throw new Error('Expected 4-line array, got: ' + raw);
+    lines = stripDashes(lines);
+    window.posterQuotes = lines;
+    if (st) { st.style.background='#102510'; st.style.color='#80ff99'; st.style.border='1px solid #1a401a'; st.textContent='✓ Quote generated — canvas updated'; }
+    drawEpisodePoster(lines);
   } catch(e) {
     if (st) { st.style.display='block'; st.style.background='#251010'; st.style.color='#ff8080'; st.style.border='1px solid #401a1a'; st.textContent='Error: '+e.message; }
   } finally {
